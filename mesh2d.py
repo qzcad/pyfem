@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import numpy as np
 
 
@@ -38,7 +39,7 @@ def rectangular_quads(x_count, y_count, x_origin, y_origin, width, height):
     return nodes, elements
 
 
-def draw_vtk(nodes, elements, values=None, colors_count=8, use_gray=False, background=(0.9, 0.9, 0.9)):
+def draw_vtk(nodes, elements, values=None, colors_count=8, use_gray=False, title=None, background=(0.9, 0.9, 0.9)):
     """
     Function draws planar unstructured mesh using vtk
     :param background: Background RGB-color value
@@ -96,6 +97,8 @@ def draw_vtk(nodes, elements, values=None, colors_count=8, use_gray=False, backg
     scalar_bar = vtk.vtkScalarBarActor()
     scalar_bar.SetOrientationToHorizontal()
     scalar_bar.SetLookupTable(lut)
+    if title is not None:
+        scalar_bar.SetTitle(title)
     scalar_bar_widget = vtk.vtkScalarBarWidget()
     scalar_bar_widget.SetInteractor(render_window_interactor)
     scalar_bar_widget.SetScalarBarActor(scalar_bar)
@@ -106,4 +109,5 @@ def draw_vtk(nodes, elements, values=None, colors_count=8, use_gray=False, backg
 if __name__ == "__main__":
     (nodes, quads) = rectangular_quads(21, 11, 0, 0, 20, 10)
     # print(quads)
-    draw_vtk(nodes=nodes, elements=quads, use_gray=False)
+    draw_vtk(nodes=nodes, elements=quads, use_gray=False, title='Test')
+    print('Привет мир!')
