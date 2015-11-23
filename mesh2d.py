@@ -106,4 +106,4 @@ def draw_vtk(nodes, elements, values=None, colors_count=8, use_gray=False, backg
 if __name__ == "__main__":
     (nodes, quads) = rectangular_quads(21, 11, 0, 0, 20, 10)
     # print(quads)
-    draw_vtk(nodes=nodes, elements=quads, use_gray=True)
+    draw_vtk(nodes=nodes, elements=quads, use_gray=False)
