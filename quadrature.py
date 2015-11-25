@@ -46,7 +46,7 @@ def legendre_line(count):
                    (1.0 / 3.0) * sqrt(5.0 + 2.0 * sqrt(10.0 / 7.0))])
         w = array([(322.0 - 13.0 * sqrt(70.0)) / 900.0,
                    (322.0 + 13.0 * sqrt(70.0)) / 900.0,
-                   128.0 / 255.0,
+                   128.0 / 225.0,
                    (322.0 + 13.0 * sqrt(70.0)) / 900.0,
                    (322.0 - 13.0 * sqrt(70.0)) / 900.0])
         return p, w
@@ -118,12 +118,12 @@ if __name__ == "__main__":
     print("Rules of the interval [-1; 1]")
     for i in range(1,6):
         (p, w) = legendre_line(i)
-        print(i.__str__() + ": " + p.__str__() + " " + w.__str__())
+        print(i.__str__() + ": " + p.__str__() + " " + w.__str__() + " sum(w) = " + w.sum().__str__())
     print("Rules of the unit triangle")
     for i in (1, 3, 4):
         (xi, eta, w) = legendre_triangle(i)
-        print(i.__str__() + ": " + xi.__str__() + " " + eta.__str__() + " " + w.__str__())
+        print(i.__str__() + ": " + xi.__str__() + " " + eta.__str__() + " " + w.__str__() + " sum(w) = " + w.sum().__str__())
     print("Rules of the quad [-1; 1] x [-1; 1]")
     for i in range(2,6):
         (xi, eta, w) = legendre_quad(i)
-        print(i.__str__() + ": " + xi.__str__() + " " + eta.__str__() + " " + w.__str__())
+        print(i.__str__() + ": " + xi.__str__() + " " + eta.__str__() + " " + w.__str__() + " sum(w) = " + w.sum().__str__())
