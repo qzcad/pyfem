@@ -20,8 +20,8 @@ def rectangular_quads(x_count, y_count, x_origin, y_origin, width, height):
     :param height: Height of region
     :return: Tuple of numpy arrays: nodes [x_count*y_count; 2], elements[(x_count-1)*(y_count-1); 4]
     """
-    nodes = np.zeros((x_count * y_count, 2))
-    elements = np.zeros(((x_count - 1) * (y_count - 1), 4))
+    nodes = np.zeros((x_count * y_count, 2), dtype=np.float_)
+    elements = np.zeros(((x_count - 1) * (y_count - 1), 4), dtype=np.int_)
     hx = width / (x_count - 1)
     hy = height / (y_count - 1)
     for i in range(x_count):

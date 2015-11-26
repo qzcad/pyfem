@@ -3,18 +3,29 @@
 
 
 def assembly_quads_stress_strain(nodes, elements, strain_stress_matrix):
+    """
+    Assembly routine for plane stress-strain state analysis
+    :param nodes: Array of nodes coordinates
+    :param elements: Array of quads (mesh)
+    :param strain_stress_matrix: The stress-strain relations matrix
+    :return: Global stiffness matrix in the CSR sparse format
+    """
     from numpy import zeros
     from numpy import array
     from quadrature import legendre_quad
     from shape_functions import iso_quad
     from scipy.sparse import lil_matrix
+    from print_progress import print_progress
+    print "Assembly is started"
     freedom = 2
     element_nodes = 4
-    dimension = freedom * len(nodes)
+    nodes_count = len(nodes)
+    dimension = freedom * nodes_count
     element_dimension = freedom * element_nodes
     global_matrix = lil_matrix((dimension, dimension))
+    elements_count = len(elements)
     (xi, eta, w) = legendre_quad(2)
-    for element_number in range(len(elements)):
+    for element_number in range(elements_count):
         local = zeros((element_dimension, element_dimension))
         for i in range(len(w)):
             (jacobian, shape, shape_dx, shape_dy) = iso_quad(nodes, elements, element_number, xi[i], eta[i])
@@ -25,4 +36,27 @@ def assembly_quads_stress_strain(nodes, elements, strain_stress_matrix):
             ])
             bt = b.conj().transpose()
             local = local + bt.dot(strain_stress_matrix).dot(b) * jacobian * w[i]
-        # todo: assembly routine
+        for i in range(element_dimension):
+            ii = elements[element_number, i / freedom] + (i % freedom) * nodes_count
+            for j in range(i, element_dimension):
+                jj = elements[element_number, j / freedom] + (j % freedom) * nodes_count
+                global_matrix[ii, jj] += local[i, j]
+                if i != j:
+                    global_matrix[jj, ii] = global_matrix[ii, jj]
+        print_progress(element_number, elements_count - 1)
+    print "\nAssembly is completed"
+    return global_matrix.tocsr()
+
+
+if __name__ == "__main__":
+    from numpy import array
+    from mesh2d import rectangular_quads
+    from plot_coo_matrix import plot_coo_matrix
+    d = array([
+        [1., 1., 0.],
+        [1., 1., 0.],
+        [0., 0., 1.]
+    ])
+    (nodes, elements) = rectangular_quads(x_count=51, y_count=11, x_origin=-10.0, y_origin=-2.0, width=20.0, height=4.0)
+    global_matrix = assembly_quads_stress_strain(nodes, elements, d)
+    plot_coo_matrix(global_matrix)
