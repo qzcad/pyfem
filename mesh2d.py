@@ -18,7 +18,7 @@ def rectangular_quads(x_count, y_count, x_origin, y_origin, width, height):
     :param y_origin: Y of region's origin (left bottom)
     :param width: Width of region
     :param height: Height of region
-    :return: numpy array: nodes [x_count*y_count; 2], elements[(x_count-1)*(y_count-1); 4]
+    :return: Tuple of numpy arrays: nodes [x_count*y_count; 2], elements[(x_count-1)*(y_count-1); 4]
     """
     nodes = np.zeros((x_count * y_count, 2))
     elements = np.zeros(((x_count - 1) * (y_count - 1), 4))

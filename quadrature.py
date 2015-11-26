@@ -59,7 +59,6 @@ def legendre_triangle(order):
     :return: tuple(array of coordinates in the first parametric direction, array of coordinates in the second parametric
     direction, array of weights). The arrays are the same size.
     """
-    from math import sqrt
     from numpy import array
     if order <= 1:
         xi = array([1.0 / 3.0])
