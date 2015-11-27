@@ -8,7 +8,8 @@ def assembly_quads_stress_strain(nodes, elements, strain_stress_matrix):
     :param nodes: Array of nodes coordinates
     :param elements: Array of quads (mesh)
     :param strain_stress_matrix: The stress-strain relations matrix
-    :return: Global stiffness matrix in the CSR sparse format
+    :return: Global stiffness matrix in the LIL sparse format (Row-based linked list sparse matrix)
+    Order: u_0, v0, u_1, v_1, ..., u_(n-1), v_(n-1), n - nodes count
     """
     from numpy import zeros
     from numpy import array
@@ -24,7 +25,7 @@ def assembly_quads_stress_strain(nodes, elements, strain_stress_matrix):
     element_dimension = freedom * element_nodes
     global_matrix = lil_matrix((dimension, dimension))
     elements_count = len(elements)
-    (xi, eta, w) = legendre_quad(2)
+    (xi, eta, w) = legendre_quad(3)
     for element_number in range(elements_count):
         local = zeros((element_dimension, element_dimension))
         for i in range(len(w)):
@@ -37,15 +38,15 @@ def assembly_quads_stress_strain(nodes, elements, strain_stress_matrix):
             bt = b.conj().transpose()
             local = local + bt.dot(strain_stress_matrix).dot(b) * jacobian * w[i]
         for i in range(element_dimension):
-            ii = elements[element_number, i / freedom] + (i % freedom) * nodes_count
+            ii = elements[element_number, i / freedom] * freedom + i % freedom
             for j in range(i, element_dimension):
-                jj = elements[element_number, j / freedom] + (j % freedom) * nodes_count
+                jj = elements[element_number, j / freedom] * freedom + j % freedom
                 global_matrix[ii, jj] += local[i, j]
                 if i != j:
                     global_matrix[jj, ii] = global_matrix[ii, jj]
         print_progress(element_number, elements_count - 1)
     print "\nAssembly is completed"
-    return global_matrix.tocsr()
+    return global_matrix
 
 
 if __name__ == "__main__":
