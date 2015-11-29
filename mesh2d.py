@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import numpy as np
 
 
 def rectangular_quads(x_count, y_count, x_origin, y_origin, width, height):
@@ -20,8 +19,11 @@ def rectangular_quads(x_count, y_count, x_origin, y_origin, width, height):
     :param height: Height of region
     :return: Tuple of numpy arrays: nodes [x_count*y_count; 2], elements[(x_count-1)*(y_count-1); 4]
     """
-    nodes = np.zeros((x_count * y_count, 2), dtype=np.float_)
-    elements = np.zeros(((x_count - 1) * (y_count - 1), 4), dtype=np.int_)
+    from numpy import zeros
+    from numpy import float_
+    from numpy import int_
+    nodes = zeros((x_count * y_count, 2), dtype=float_)
+    elements = zeros(((x_count - 1) * (y_count - 1), 4), dtype=int_)
     hx = width / (x_count - 1)
     hy = height / (y_count - 1)
     for i in range(x_count):
@@ -39,9 +41,22 @@ def rectangular_quads(x_count, y_count, x_origin, y_origin, width, height):
     return nodes, elements
 
 
-def draw_vtk(nodes, elements, values=None, colors_count=8, use_gray=False, title=None, background=(0.9, 0.9, 0.9)):
+def draw_vtk(nodes,
+             elements,
+             values=None,
+             colors_count=8,
+             contours_count=9,
+             use_gray=False,
+             title=None,
+             background=(0.95, 0.95, 0.95),
+             show_mesh=False,
+             mesh_color=(0.8, 0.8, 0.8)):
     """
     Function draws planar unstructured mesh using vtk
+    :param show_mesh: if true than mesh lines are shown
+    :param mesh_color: color of mesh lines (polygons edges)
+    :param contours_count: Contour lines count
+    :param title: Title of the scalar bar
     :param background: Background RGB-color value
     :param use_gray: if true than gray-scale colormap is used
     :param colors_count: Colors count for values visualization
@@ -62,9 +77,10 @@ def draw_vtk(nodes, elements, values=None, colors_count=8, use_gray=False, title
             polygon.GetPointIds().SetId(i, el[i])
         cells_array.InsertNextCell(polygon)
     lut = vtk.vtkLookupTable()
-    lut.SetNumberOfColors(colors_count)
+    lut.SetNumberOfTableValues(colors_count)
+    lut.SetHueRange(0.66667, 0.0)
     if use_gray:
-        lut.SetValueRange(0.0, 1.0)
+        lut.SetValueRange(1.0, 0.0)
         lut.SetSaturationRange(0.0, 0.0) # no color saturation
         lut.SetRampToLinear()
     lut.Build()
@@ -85,6 +101,23 @@ def draw_vtk(nodes, elements, values=None, colors_count=8, use_gray=False, title
     for v in values:
         scalars.InsertNextValue(v)
     polydata.GetPointData().SetScalars(scalars)
+
+    bcf = vtk.vtkContourFilter()
+    bcf.SetInput(polydata)
+    # bcf.SetNumberOfContours(contours_count)
+    bcf.GenerateValues(contours_count, [values.min(), values.max()])
+    bcf.Update()
+    cfMapper = vtk.vtkPolyDataMapper()
+    cfMapper.ImmediateModeRenderingOn()
+    cfMapper.SetInput(bcf.GetOutput())
+    cfMapper.SetScalarRange(values.min(), values.max())
+    cfMapper.SetLookupTable(lut)
+    cfMapper.ScalarVisibilityOff()
+    cfActor = vtk.vtkActor()
+    cfActor.SetMapper(cfMapper)
+    cfActor.GetProperty().SetColor(.0, .0, .0)
+    renderer.AddActor(cfActor)
+
     mapper = vtk.vtkPolyDataMapper()
     if vtk.VTK_MAJOR_VERSION <= 5:
         mapper.SetInput(polydata)
@@ -94,6 +127,9 @@ def draw_vtk(nodes, elements, values=None, colors_count=8, use_gray=False, title
     mapper.SetScalarVisibility(1)
     mapper.SetLookupTable(lut)
     actor.SetMapper(mapper)
+    if show_mesh:
+        actor.GetProperty().EdgeVisibilityOn()
+        actor.GetProperty().SetEdgeColor(mesh_color)
     scalar_bar = vtk.vtkScalarBarActor()
     scalar_bar.SetOrientationToHorizontal()
     scalar_bar.SetLookupTable(lut)
