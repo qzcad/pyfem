@@ -41,6 +41,60 @@ def rectangular_quads(x_count, y_count, x_origin, y_origin, width, height):
     return nodes, elements
 
 
+def rectangular_triangles(x_count, y_count, x_origin, y_origin, width, height):
+    """
+    Regular triangular planar grid of rectangular region
+    :type x_count: int
+    :type y_count: int
+    :type x_origin: float
+    :type y_origin: float
+    :type width: float
+    :type height: float
+    :param x_count: Nodes count in x-direction
+    :param y_count: Nodes count in y-direction
+    :param x_origin: X of region's origin (left bottom)
+    :param y_origin: Y of region's origin (left bottom)
+    :param width: Width of region
+    :param height: Height of region
+    :return: Tuple of numpy arrays: nodes [x_count*y_count; 2], elements[2 * (x_count-1)*(y_count-1); 3]
+    """
+    from numpy import zeros
+    from numpy import float_
+    from numpy import int_
+    nodes = zeros((x_count * y_count, 2), dtype=float_)
+    elements = zeros((2 * (x_count - 1) * (y_count - 1), 3), dtype=int_)
+    hx = width / (x_count - 1)
+    hy = height / (y_count - 1)
+    cx = x_origin + width / 2.0
+    cy = y_origin + height / 2.0
+    for i in range(x_count):
+        x = x_origin + i * hx
+        for j in range(y_count):
+            y = y_origin + j * hy
+            nodes[i * y_count + j, 0] = x
+            nodes[i * y_count + j, 1] = y
+    for i in range(x_count - 1):
+        for j in range(y_count - 1):
+            if nodes[i * y_count + j, 0] >= cx and nodes[(i + 1) * y_count + j, 0] >= cx and nodes[(i + 1) * y_count + (j + 1), 0] >= cx and nodes[i * y_count + (j + 1), 0] >= cx and\
+                    nodes[i * y_count + j, 1] >= cy and nodes[(i + 1) * y_count + j, 1] >= cy and nodes[(i + 1) * y_count + (j + 1), 1] >= cy and nodes[i * y_count + (j + 1), 1] >= cy or\
+                    nodes[i * y_count + j, 0] <= cx and nodes[(i + 1) * y_count + j, 0] <= cx and nodes[(i + 1) * y_count + (j + 1), 0] <= cx and nodes[i * y_count + (j + 1), 0] <= cx and\
+                    nodes[i * y_count + j, 1] <= cy and nodes[(i + 1) * y_count + j, 1] <= cy and nodes[(i + 1) * y_count + (j + 1), 1] <= cy and nodes[i * y_count + (j + 1), 1] <= cy:
+                elements[2 * (i * (y_count - 1) + j), 0] = i * y_count + j
+                elements[2 * (i * (y_count - 1) + j), 1] = (i + 1) * y_count + j
+                elements[2 * (i * (y_count - 1) + j), 2] = i * y_count + (j + 1)
+                elements[2 * (i * (y_count - 1) + j) + 1, 0] = (i + 1) * y_count + j
+                elements[2 * (i * (y_count - 1) + j) + 1, 1] = (i + 1) * y_count + (j + 1)
+                elements[2 * (i * (y_count - 1) + j) + 1, 2] = i * y_count + (j + 1)
+            else:
+                elements[2 * (i * (y_count - 1) + j), 0] = i * y_count + j
+                elements[2 * (i * (y_count - 1) + j), 1] = (i + 1) * y_count + j
+                elements[2 * (i * (y_count - 1) + j), 2] = (i + 1) * y_count + (j + 1)
+                elements[2 * (i * (y_count - 1) + j) + 1, 0] = i * y_count + j
+                elements[2 * (i * (y_count - 1) + j) + 1, 1] = (i + 1) * y_count + (j + 1)
+                elements[2 * (i * (y_count - 1) + j) + 1, 2] = i * y_count + (j + 1)
+    return nodes, elements
+
+
 def draw_vtk(nodes,
              elements,
              values=None,
@@ -85,17 +139,15 @@ def draw_vtk(nodes,
     lut.SetHueRange(0.66667, 0.0)
     if use_gray:
         lut.SetValueRange(1.0, 0.0)
-        lut.SetSaturationRange(0.0, 0.0) # no color saturation
+        lut.SetSaturationRange(0.0, 0.0)  # no color saturation
         lut.SetRampToLinear()
     lut.Build()
-    actor = vtk.vtkActor()
     renderer = vtk.vtkRenderer()
     renderer.SetBackground(background)
     render_window = vtk.vtkRenderWindow()
     render_window.AddRenderer(renderer)
     render_window_interactor = vtk.vtkRenderWindowInteractor()
     render_window_interactor.SetRenderWindow(render_window)
-    renderer.AddActor(actor)
     if values is None:
         values = nodes[:, 0]
     poly_data = vtk.vtkPolyData()
@@ -164,8 +216,8 @@ def draw_vtk(nodes,
         renderer.AddActor(contour_labels)
 
     if show_mesh:
-        actor.GetProperty().EdgeVisibilityOn()
-        actor.GetProperty().SetEdgeColor(mesh_color)
+        bcf_actor.GetProperty().EdgeVisibilityOn()
+        bcf_actor.GetProperty().SetEdgeColor(mesh_color)
 
     scalar_bar = vtk.vtkScalarBarActor()
     scalar_bar.SetOrientationToHorizontal()
@@ -181,6 +233,6 @@ def draw_vtk(nodes,
 
 if __name__ == "__main__":
     (nodes, quads) = rectangular_quads(21, 11, 0, 0, 20, 10)
-    # print(quads)
-    draw_vtk(nodes=nodes, elements=quads, use_gray=False, title='Test')
-    print('Привет мир!')
+    draw_vtk(nodes=nodes, elements=quads, title='Quadrilateral Grid', show_mesh=True)
+    (nodes, triangles) = rectangular_triangles(21, 11, 0, 0, 20, 10)
+    draw_vtk(nodes=nodes, elements=triangles, title='Triangular Grid', show_mesh=True)
