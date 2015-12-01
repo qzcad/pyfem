@@ -44,6 +44,6 @@ if __name__ == "__main__":
     stiffness = stiffness.tocsr()
     x, info = cg(stiffness, force, tol=1e-8)
     draw_vtk(nodes, elements, x[0::2], title="U")
-    draw_vtk(nodes, elements, x[1::2], title="V", show_mesh=True)
+    draw_vtk(nodes, elements, x[1::2], title="V")
 
 

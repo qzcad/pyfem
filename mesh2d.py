@@ -44,21 +44,25 @@ def rectangular_quads(x_count, y_count, x_origin, y_origin, width, height):
 def draw_vtk(nodes,
              elements,
              values=None,
-             colors_count=8,
-             contours_count=9,
+             colors_count=256,
+             contours_count=10,
              use_gray=False,
              title=None,
              background=(0.95, 0.95, 0.95),
              show_mesh=False,
-             mesh_color=(0.8, 0.8, 0.8)):
+             mesh_color=(0.8, 0.8, 0.8),
+             use_cell_data=False,
+             show_labels=False):
     """
     Function draws planar unstructured mesh using vtk
-    :param show_mesh: if true than mesh lines are shown
+    :param use_cell_data: if it equals true than cell data is used to colorize zones
+    :param show_labels: if it equals true than labels are shown
+    :param show_mesh: if it equals true than mesh lines are shown
     :param mesh_color: color of mesh lines (polygons edges)
     :param contours_count: Contour lines count
     :param title: Title of the scalar bar
     :param background: Background RGB-color value
-    :param use_gray: if true than gray-scale colormap is used
+    :param use_gray: if it equals true than gray-scale colormap is used
     :param colors_count: Colors count for values visualization
     :param nodes: nodes array [nodes_count; 2]
     :param elements: elements array [elements_count; element_nodes]
@@ -94,42 +98,75 @@ def draw_vtk(nodes,
     renderer.AddActor(actor)
     if values is None:
         values = nodes[:, 0]
-    polydata = vtk.vtkPolyData()
-    polydata.SetPoints(points)
-    polydata.SetPolys(cells_array)
+    poly_data = vtk.vtkPolyData()
+    poly_data.SetPoints(points)
+    poly_data.SetPolys(cells_array)
     scalars = vtk.vtkFloatArray()
     for v in values:
         scalars.InsertNextValue(v)
-    polydata.GetPointData().SetScalars(scalars)
+    poly_data.GetPointData().SetScalars(scalars)
 
-    bcf = vtk.vtkContourFilter()
-    bcf.SetInput(polydata)
-    # bcf.SetNumberOfContours(contours_count)
+    bcf = vtk.vtkBandedPolyDataContourFilter()
+    bcf.SetInput(poly_data)
+    bcf.SetNumberOfContours(contours_count)
     bcf.GenerateValues(contours_count, [values.min(), values.max()])
+    bcf.SetNumberOfContours(contours_count + 1)
+    bcf.SetScalarModeToValue()
+    bcf.GenerateContourEdgesOn()
     bcf.Update()
-    cfMapper = vtk.vtkPolyDataMapper()
-    cfMapper.ImmediateModeRenderingOn()
-    cfMapper.SetInput(bcf.GetOutput())
-    cfMapper.SetScalarRange(values.min(), values.max())
-    cfMapper.SetLookupTable(lut)
-    cfMapper.ScalarVisibilityOff()
-    cfActor = vtk.vtkActor()
-    cfActor.SetMapper(cfMapper)
-    cfActor.GetProperty().SetColor(.0, .0, .0)
-    renderer.AddActor(cfActor)
+    bcf_mapper = vtk.vtkPolyDataMapper()
+    bcf_mapper.ImmediateModeRenderingOn()
+    bcf_mapper.SetInput(bcf.GetOutput())
+    bcf_mapper.SetScalarRange(values.min(), values.max())
+    bcf_mapper.SetLookupTable(lut)
+    bcf_mapper.ScalarVisibilityOn()
+    if use_cell_data:
+        bcf_mapper.SetScalarModeToUseCellData()
+    bcf_actor = vtk.vtkActor()
+    bcf_actor.SetMapper(bcf_mapper)
+    renderer.AddActor(bcf_actor)
 
-    mapper = vtk.vtkPolyDataMapper()
-    if vtk.VTK_MAJOR_VERSION <= 5:
-        mapper.SetInput(polydata)
+    edge_mapper = vtk.vtkPolyDataMapper()
+    edge_mapper.SetInput(bcf.GetContourEdgesOutput())
+    edge_mapper.SetResolveCoincidentTopologyToPolygonOffset()
+    edge_actor = vtk.vtkActor()
+    edge_actor.SetMapper(edge_mapper)
+    if use_gray:
+        edge_actor.GetProperty().SetColor(0.0, 1.0, 0.0)
     else:
-        mapper.SetInputData(polydata)
-    mapper.SetScalarRange(values.min(), values.max())
-    mapper.SetScalarVisibility(1)
-    mapper.SetLookupTable(lut)
-    actor.SetMapper(mapper)
+        edge_actor.GetProperty().SetColor(0.0, 0.0, 0.0)
+    renderer.AddActor(edge_actor)
+
+    if show_labels:
+        mask = vtk.vtkMaskPoints()
+        mask.SetInput(bcf.GetOutput())
+        mask.SetOnRatio(bcf.GetOutput().GetNumberOfPoints()/50)
+        mask.SetMaximumNumberOfPoints(50)
+        # Create labels for points - only show visible points
+        visible_points = vtk.vtkSelectVisiblePoints()
+        visible_points.SetInput(mask.GetOutput())
+        visible_points.SetRenderer(renderer)
+        ldm = vtk.vtkLabeledDataMapper()
+        ldm.SetInput(mask.GetOutput())
+        ldm.SetLabelFormat("%.1g")
+        ldm.SetLabelModeToLabelScalars()
+        text_property = ldm.GetLabelTextProperty()
+        text_property.SetFontFamilyToArial()
+        text_property.SetFontSize(10)
+        if use_gray:
+            text_property.SetColor(0.0, 1.0, 0.0)
+        else:
+            text_property.SetColor(0.0, 0.0, 0.0)
+        text_property.ShadowOff()
+        text_property.BoldOff()
+        contour_labels = vtk.vtkActor2D()
+        contour_labels.SetMapper(ldm)
+        renderer.AddActor(contour_labels)
+
     if show_mesh:
         actor.GetProperty().EdgeVisibilityOn()
         actor.GetProperty().SetEdgeColor(mesh_color)
+
     scalar_bar = vtk.vtkScalarBarActor()
     scalar_bar.SetOrientationToHorizontal()
     scalar_bar.SetLookupTable(lut)
