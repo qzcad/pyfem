@@ -212,7 +212,7 @@ def draw_vtk(nodes,
         visible_points.SetRenderer(renderer)
         ldm = vtk.vtkLabeledDataMapper()
         ldm.SetInputConnection(mask.GetOutputPort())
-        ldm.SetLabelFormat("%.1g")
+        ldm.SetLabelFormat("%.2E")
         ldm.SetLabelModeToLabelScalars()
         text_property = ldm.GetLabelTextProperty()
         text_property.SetFontFamilyToArial()
