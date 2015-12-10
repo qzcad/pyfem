@@ -159,7 +159,10 @@ def draw_vtk(nodes,
     poly_data.GetPointData().SetScalars(scalars)
 
     bcf = vtk.vtkBandedPolyDataContourFilter()
-    bcf.SetInput(poly_data)
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        bcf.SetInput(poly_data)
+    else:
+        bcf.SetInputData(poly_data)
     bcf.SetNumberOfContours(contours_count)
     bcf.GenerateValues(contours_count, [values.min(), values.max()])
     bcf.SetNumberOfContours(contours_count + 1)
@@ -168,7 +171,10 @@ def draw_vtk(nodes,
     bcf.Update()
     bcf_mapper = vtk.vtkPolyDataMapper()
     bcf_mapper.ImmediateModeRenderingOn()
-    bcf_mapper.SetInput(bcf.GetOutput())
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        bcf_mapper.SetInput(bcf.GetOutput())
+    else:
+        bcf_mapper.SetInputData(bcf.GetOutput())
     bcf_mapper.SetScalarRange(values.min(), values.max())
     bcf_mapper.SetLookupTable(lut)
     bcf_mapper.ScalarVisibilityOn()
@@ -179,7 +185,10 @@ def draw_vtk(nodes,
     renderer.AddActor(bcf_actor)
 
     edge_mapper = vtk.vtkPolyDataMapper()
-    edge_mapper.SetInput(bcf.GetContourEdgesOutput())
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        edge_mapper.SetInput(bcf.GetContourEdgesOutput())
+    else:
+        edge_mapper.SetInputData(bcf.GetContourEdgesOutput())
     edge_mapper.SetResolveCoincidentTopologyToPolygonOffset()
     edge_actor = vtk.vtkActor()
     edge_actor.SetMapper(edge_mapper)
@@ -191,15 +200,24 @@ def draw_vtk(nodes,
 
     if show_labels:
         mask = vtk.vtkMaskPoints()
-        mask.SetInput(bcf.GetOutput())
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            mask.SetInput(bcf.GetOutput())
+        else:
+            mask.SetInputData(bcf.GetOutput())
         mask.SetOnRatio(bcf.GetOutput().GetNumberOfPoints()/50)
         mask.SetMaximumNumberOfPoints(50)
         # Create labels for points - only show visible points
         visible_points = vtk.vtkSelectVisiblePoints()
-        visible_points.SetInput(mask.GetOutput())
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            visible_points.SetInput(mask.GetOutput())
+        else:
+            visible_points.SetInputData(mask.GetOutput())
         visible_points.SetRenderer(renderer)
         ldm = vtk.vtkLabeledDataMapper()
-        ldm.SetInput(mask.GetOutput())
+        if vtk.VTK_MAJOR_VERSION <= 5:
+            ldm.SetInput(mask.GetOutput())
+        else:
+            ldm.SetInputData(mask.GetOutput())
         ldm.SetLabelFormat("%.1g")
         ldm.SetLabelModeToLabelScalars()
         text_property = ldm.GetLabelTextProperty()
@@ -235,4 +253,4 @@ if __name__ == "__main__":
     (nodes, quads) = rectangular_quads(21, 11, 0, 0, 20, 10)
     draw_vtk(nodes=nodes, elements=quads, title='Quadrilateral Grid', show_mesh=True)
     (nodes, triangles) = rectangular_triangles(21, 11, 0, 0, 20, 10)
-    draw_vtk(nodes=nodes, elements=triangles, title='Triangular Grid', show_mesh=True)
+    draw_vtk(nodes=nodes, elements=triangles, title='Triangular Grid', show_labels=True, use_gray=True)
