@@ -204,20 +204,14 @@ def draw_vtk(nodes,
             mask.SetInput(bcf.GetOutput())
         else:
             mask.SetInputData(bcf.GetOutput())
-        mask.SetOnRatio(bcf.GetOutput().GetNumberOfPoints()/50)
-        mask.SetMaximumNumberOfPoints(50)
+        mask.SetOnRatio(bcf.GetOutput().GetNumberOfPoints() / 20)
+        mask.SetMaximumNumberOfPoints(20)
         # Create labels for points - only show visible points
         visible_points = vtk.vtkSelectVisiblePoints()
-        if vtk.VTK_MAJOR_VERSION <= 5:
-            visible_points.SetInput(mask.GetOutput())
-        else:
-            visible_points.SetInputData(mask.GetOutput())
+        visible_points.SetInputConnection(mask.GetOutputPort())
         visible_points.SetRenderer(renderer)
         ldm = vtk.vtkLabeledDataMapper()
-        if vtk.VTK_MAJOR_VERSION <= 5:
-            ldm.SetInput(mask.GetOutput())
-        else:
-            ldm.SetInputData(mask.GetOutput())
+        ldm.SetInputConnection(mask.GetOutputPort())
         ldm.SetLabelFormat("%.1g")
         ldm.SetLabelModeToLabelScalars()
         text_property = ldm.GetLabelTextProperty()
