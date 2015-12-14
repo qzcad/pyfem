@@ -160,15 +160,15 @@ def legendre_tetrahedra(order):
         return xi, eta, mu, w
 
 
-def legendre_quad(count):
+def legendre_quad(order):
     """
     Gauss-Legendre rules of the quad [-1; 1] x [-1; 1]
-    :param count: Count of quadrature points in each direction
+    :param order: Order of gaussian quadratures (count of quadrature points in each direction)
     :return: tuple(array of coordinates in the first parametric direction, array of coordinates in the second parametric
     direction, array of weights). The arrays are the same size.
     """
     from numpy import zeros
-    (p, w) = legendre_interval(count)
+    (p, w) = legendre_interval(order)
     size = len(p)
     xi = zeros(size * size)
     eta = zeros(size * size)
@@ -181,15 +181,15 @@ def legendre_quad(count):
     return xi, eta, weight
 
 
-def legendre_hexahedra(count):
+def legendre_hexahedra(order):
     """
     Gauss-Legendre rules of the hexahedra [-1; 1] x [-1; 1] x [-1; 1]
-    :param count: Count of quadrature points in each direction
+    :param order: Order of gaussian quadratures (count of quadrature points in each direction)
     :return: tuple(array of coordinates in the first parametric direction, array of coordinates in the second parametric
     direction, array of coordinates in the third parametric direction, array of weights). The arrays are the same size.
     """
     from numpy import zeros
-    (p, w) = legendre_interval(count)
+    (p, w) = legendre_interval(order)
     size = len(p)
     xi = zeros(size * size * size)
     eta = zeros(size * size * size)
