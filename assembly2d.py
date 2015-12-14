@@ -50,11 +50,12 @@ def assembly_quads_stress_strain(nodes, elements, strain_stress_matrix, gauss_or
     return global_matrix
 
 
-def assembly_triangles_stress_strain(nodes, elements, strain_stress_matrix):
+def assembly_triangles_stress_strain(nodes, elements, strain_stress_matrix, gauss_order=2):
     """
     Assembly routine for plane stress-strain state analysis
     :param nodes: Array of nodes coordinates
     :param elements: Array of triangles (mesh)
+    :param gauss_order: Order of gaussian quadratures
     :param strain_stress_matrix: The stress-strain relations matrix
     :return: Global stiffness matrix in the LIL sparse format (Row-based linked list sparse matrix)
     Order: u_0, v0, u_1, v_1, ..., u_(n-1), v_(n-1), n - nodes count
@@ -73,7 +74,7 @@ def assembly_triangles_stress_strain(nodes, elements, strain_stress_matrix):
     element_dimension = freedom * element_nodes
     global_matrix = lil_matrix((dimension, dimension))
     elements_count = len(elements)
-    (xi, eta, w) = legendre_triangle(2)
+    (xi, eta, w) = legendre_triangle(gauss_order)
     for element_index in range(elements_count):
         local = zeros((element_dimension, element_dimension))
         for i in range(len(w)):

@@ -253,15 +253,15 @@ def lobatto_interval(count):
         return p, w
 
 
-def lobatto_quad(count):
+def lobatto_quad(order):
     """
     Gauss-Lobatto rules of the quad [-1; 1] x [-1; 1]
-    :param count: Count of quadrature points in each direction
+    :param order: Order of Lobatto's quadratures (count of quadrature points in each direction)
     :return: tuple(array of coordinates in the first parametric direction, array of coordinates in the second parametric
     direction, array of weights). The arrays are the same size.
     """
     from numpy import zeros
-    (p, w) = lobatto_interval(count)
+    (p, w) = lobatto_interval(order)
     size = len(p)
     xi = zeros(size * size)
     eta = zeros(size * size)
@@ -274,15 +274,15 @@ def lobatto_quad(count):
     return xi, eta, weight
 
 
-def lobatto_hexahedra(count):
+def lobatto_hexahedra(order):
     """
     Gauss-Lobatto rules of the hexahedra [-1; 1] x [-1; 1] x [-1; 1]
-    :param count: Count of quadrature points in each direction
+    :param order: Order of Lobatto's quadratures (count of quadrature points in each direction
     :return: tuple(array of coordinates in the first parametric direction, array of coordinates in the second parametric
     direction, array of coordinates in the third parametric direction, array of weights). The arrays are the same size.
     """
     from numpy import zeros
-    (p, w) = lobatto_interval(count)
+    (p, w) = lobatto_interval(order)
     size = len(p)
     xi = zeros(size * size * size)
     eta = zeros(size * size * size)
