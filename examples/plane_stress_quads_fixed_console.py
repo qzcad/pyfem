@@ -47,5 +47,5 @@ if __name__ == "__main__":
             force[2 * i + 1] = 0.0
     stiffness = stiffness.tocsr()
     x = spsolve(stiffness, force)
-    draw_vtk(nodes, elements, x[0::2], title="U")
-    draw_vtk(nodes, elements, x[1::2], title="V")
+    draw_vtk(nodes, elements, x[0::2], title="U", show_labels=True)
+    draw_vtk(nodes, elements, x[1::2], title="V", show_labels=True)
