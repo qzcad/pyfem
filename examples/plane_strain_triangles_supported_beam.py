@@ -40,7 +40,7 @@ if __name__ == "__main__":
     x, info = cg(stiffness, force, tol=1e-8)
     print(min(x[0::2]), " <= X <= ", max(x[0::2]))
     print(min(x[1::2]), " <= Y <= ", max(x[1::2]))
-    draw_vtk(nodes, elements, x[0::2], title="X")
-    draw_vtk(nodes, elements, x[1::2], title="Y")
+    draw_vtk(nodes, elements, x[0::2], title="u")
+    draw_vtk(nodes, elements, x[1::2], title="v")
 
 
