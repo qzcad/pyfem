@@ -108,15 +108,19 @@ def annular_sector(xi_count, eta_count, alpha, min_radius, max_radius):
     from numpy import zeros
     from numpy import float_
     from numpy import int_
-    from math import cos, sin
+    from math import cos, sin, sqrt, tanh
     nodes = zeros((xi_count * eta_count, 2), dtype=float_)
     elements = zeros(((xi_count - 1) * (eta_count - 1), 4), dtype=int_)
     hxi = 1.0 / float(xi_count - 1)
     heta = 1.0 / float(eta_count - 1)
+    p = sqrt((min_radius - min_radius * cos(alpha * hxi))**2.0 + (min_radius * sin(alpha * hxi))**2.0)
+    q = 2.0 - p
     for i in range(xi_count):
         for j in range(eta_count):
-            x = (min_radius + (max_radius - min_radius) * float(j) * heta) * cos(alpha * float(i) * hxi)
-            y = (min_radius + (max_radius - min_radius) * float(j) * heta) * sin(alpha * float(i) * hxi)
+            eta = float(j) * heta
+            s = p * eta + (1.0 - p) * (1.0 - tanh(q * (1.0 - eta)) / tanh(q))
+            x = (min_radius + (max_radius - min_radius) * s) * cos(alpha * float(i) * hxi)
+            y = (min_radius + (max_radius - min_radius) * s) * sin(alpha * float(i) * hxi)
             nodes[i * eta_count + j, 0] = x
             nodes[i * eta_count + j, 1] = y
     for i in range(xi_count - 1):
@@ -298,5 +302,5 @@ if __name__ == "__main__":
     draw_vtk(nodes=nodes, elements=quads, title='Quadrilateral Grid', show_mesh=True, show_axes=True)
     (nodes, triangles) = rectangular_triangles(21, 11, 0, 0, 20, 10)
     draw_vtk(nodes=nodes, elements=triangles, title='Triangular Grid', show_mesh=True)
-    (nodes, quads) = annular_sector(11, 11, 0.4, 1, 2)
-    draw_vtk(nodes=nodes, elements=quads, show_mesh=True, show_axes=True)
+    (nodes, quads) = annular_sector(11, 11, 0.8, 1.0, 4.0)
+    draw_vtk(nodes=nodes, elements=quads, show_mesh=True)
