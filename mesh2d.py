@@ -22,16 +22,15 @@ def rectangular_quads(x_count, y_count, x_origin, y_origin, width, height):
     from numpy import zeros
     from numpy import float_
     from numpy import int_
+    from numpy import linspace
     nodes = zeros((x_count * y_count, 2), dtype=float_)
     elements = zeros(((x_count - 1) * (y_count - 1), 4), dtype=int_)
-    hx = width / float(x_count - 1)
-    hy = height / float(y_count - 1)
+    points_x = linspace(x_origin, x_origin + width, num=x_count)
+    points_y = linspace(y_origin, y_origin + height, num=y_count)
     for i in range(x_count):
-        x = x_origin + i * hx
         for j in range(y_count):
-            y = y_origin + j * hy
-            nodes[i * y_count + j, 0] = x
-            nodes[i * y_count + j, 1] = y
+            nodes[i * y_count + j, 0] = points_x[i]
+            nodes[i * y_count + j, 1] = points_y[j]
     for i in range(x_count - 1):
         for j in range(y_count - 1):
             elements[i * (y_count - 1) + j, 0] = i * y_count + j
@@ -61,18 +60,17 @@ def rectangular_triangles(x_count, y_count, x_origin, y_origin, width, height):
     from numpy import zeros
     from numpy import float_
     from numpy import int_
+    from numpy import linspace
     nodes = zeros((x_count * y_count, 2), dtype=float_)
     elements = zeros((2 * (x_count - 1) * (y_count - 1), 3), dtype=int_)
-    hx = width / (x_count - 1)
-    hy = height / (y_count - 1)
+    points_x = linspace(x_origin, x_origin + width, num=x_count)
+    points_y = linspace(y_origin, y_origin + height, num=y_count)
     cx = x_origin + width / 2.0
     cy = y_origin + height / 2.0
     for i in range(x_count):
-        x = x_origin + i * hx
         for j in range(y_count):
-            y = y_origin + j * hy
-            nodes[i * y_count + j, 0] = x
-            nodes[i * y_count + j, 1] = y
+            nodes[i * y_count + j, 0] = points_x[i]
+            nodes[i * y_count + j, 1] = points_y[j]
     for i in range(x_count - 1):
         for j in range(y_count - 1):
             if nodes[i * y_count + j, 0] >= cx and nodes[(i + 1) * y_count + j, 0] >= cx and nodes[(i + 1) * y_count + (j + 1), 0] >= cx and nodes[i * y_count + (j + 1), 0] >= cx and\
@@ -108,19 +106,22 @@ def annular_sector(xi_count, eta_count, alpha, min_radius, max_radius):
     from numpy import zeros
     from numpy import float_
     from numpy import int_
+    from numpy import linspace
     from math import cos, sin, sqrt, tanh
     nodes = zeros((xi_count * eta_count, 2), dtype=float_)
     elements = zeros(((xi_count - 1) * (eta_count - 1), 4), dtype=int_)
     hxi = 1.0 / float(xi_count - 1)
-    heta = 1.0 / float(eta_count - 1)
+    points_xi = linspace(0.0, 1.0, num=xi_count)
+    points_eta = linspace(0.0, 1.0, num=eta_count)
     p = sqrt((min_radius - min_radius * cos(alpha * hxi))**2.0 + (min_radius * sin(alpha * hxi))**2.0)
     q = 2.0 - p
     for i in range(xi_count):
+        xi = points_xi[i]
         for j in range(eta_count):
-            eta = float(j) * heta
+            eta = points_eta[j]
             s = p * eta + (1.0 - p) * (1.0 - tanh(q * (1.0 - eta)) / tanh(q))
-            x = (min_radius + (max_radius - min_radius) * s) * cos(alpha * float(i) * hxi)
-            y = (min_radius + (max_radius - min_radius) * s) * sin(alpha * float(i) * hxi)
+            x = (min_radius + (max_radius - min_radius) * s) * cos(alpha * xi)
+            y = (min_radius + (max_radius - min_radius) * s) * sin(alpha * xi)
             nodes[i * eta_count + j, 0] = x
             nodes[i * eta_count + j, 1] = y
     for i in range(xi_count - 1):
@@ -129,6 +130,32 @@ def annular_sector(xi_count, eta_count, alpha, min_radius, max_radius):
             elements[i * (eta_count - 1) + j, 1] = i * eta_count + (j + 1)
             elements[i * (eta_count - 1) + j, 2] = (i + 1) * eta_count + (j + 1)
             elements[i * (eta_count - 1) + j, 3] = (i + 1) * eta_count + j
+
+    return nodes, elements
+
+
+def two_curved_domain(xi_count, eta_count, curve0, curve1):
+    from numpy import zeros
+    from numpy import float_
+    from numpy import int_
+    from numpy import linspace
+    nodes = zeros((xi_count * eta_count, 2), dtype=float_)
+    elements = zeros(((xi_count - 1) * (eta_count - 1), 4), dtype=int_)
+    points_xi = linspace(0.0, 1.0, num=xi_count)
+    points_eta = linspace(0.0, 1.0, num=eta_count)
+    for i in range(xi_count):
+        xi = points_xi[i]
+        for j in range(eta_count):
+            eta = points_eta[j]
+            p = (1.0 - xi) * curve0(eta) + xi * curve1(eta)
+            nodes[i * eta_count + j, 0] = p[0]
+            nodes[i * eta_count + j, 1] = p[1]
+    for i in range(xi_count - 1):
+        for j in range(eta_count - 1):
+            elements[i * (eta_count - 1) + j, 0] = i * eta_count + j
+            elements[i * (eta_count - 1) + j, 1] = (i + 1) * eta_count + j
+            elements[i * (eta_count - 1) + j, 2] = (i + 1) * eta_count + (j + 1)
+            elements[i * (eta_count - 1) + j, 3] = i * eta_count + j + 1
 
     return nodes, elements
 
@@ -298,9 +325,23 @@ def draw_vtk(nodes,
     render_window_interactor.Start()
 
 if __name__ == "__main__":
+    from numpy import  array
+    from interpolation import cubic_bezier_curve
     (nodes, quads) = rectangular_quads(11, 11, 0, 0, 1, 1)
     draw_vtk(nodes=nodes, elements=quads, title='Quadrilateral Grid', show_mesh=True, show_axes=True)
     (nodes, triangles) = rectangular_triangles(21, 11, 0, 0, 20, 10)
     draw_vtk(nodes=nodes, elements=triangles, title='Triangular Grid', show_mesh=True)
     (nodes, quads) = annular_sector(11, 11, 0.8, 1.0, 4.0)
     draw_vtk(nodes=nodes, elements=quads, show_mesh=True)
+    p00 = array([1.0, 1.0])
+    p01 = array([0.0, 2.0])
+    p02 = array([1.0, 2.0])
+    p03 = array([1.0, 3.0])
+    curve0 = lambda t: cubic_bezier_curve(t, p0=p00, p1=p01, p2=p02, p3=p03)
+    p10 = array([3.0, 1.0])
+    p11 = array([4.0, 1.0])
+    p12 = array([2.0, 3.0])
+    p13 = array([3.5, 4.0])
+    curve1 = lambda t: cubic_bezier_curve(t, p0=p10, p1=p11, p2=p12, p3=p13)
+    (nodes, quads) = two_curved_domain(11, 11, curve0, curve1)
+    draw_vtk(nodes=nodes, elements=quads, show_mesh=True, background=(1.0, 1.0, 1.0))
