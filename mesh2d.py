@@ -73,10 +73,20 @@ def rectangular_triangles(x_count, y_count, x_origin, y_origin, width, height):
             nodes[i * y_count + j, 1] = points_y[j]
     for i in range(x_count - 1):
         for j in range(y_count - 1):
-            if nodes[i * y_count + j, 0] >= cx and nodes[(i + 1) * y_count + j, 0] >= cx and nodes[(i + 1) * y_count + (j + 1), 0] >= cx and nodes[i * y_count + (j + 1), 0] >= cx and\
-                    nodes[i * y_count + j, 1] >= cy and nodes[(i + 1) * y_count + j, 1] >= cy and nodes[(i + 1) * y_count + (j + 1), 1] >= cy and nodes[i * y_count + (j + 1), 1] >= cy or\
-                    nodes[i * y_count + j, 0] <= cx and nodes[(i + 1) * y_count + j, 0] <= cx and nodes[(i + 1) * y_count + (j + 1), 0] <= cx and nodes[i * y_count + (j + 1), 0] <= cx and\
-                    nodes[i * y_count + j, 1] <= cy and nodes[(i + 1) * y_count + j, 1] <= cy and nodes[(i + 1) * y_count + (j + 1), 1] <= cy and nodes[i * y_count + (j + 1), 1] <= cy:
+            if nodes[i * y_count + j, 0] >= cx and nodes[(i + 1) * y_count + j, 0] >= cx and nodes[
+                                (i + 1) * y_count + (j + 1), 0] >= cx and nodes[i * y_count + (j + 1), 0] >= cx and \
+                            nodes[i * y_count + j, 1] >= cy and nodes[(i + 1) * y_count + j, 1] >= cy and nodes[
+                                (i + 1) * y_count + (j + 1), 1] >= cy and nodes[i * y_count + (j + 1), 1] >= cy or \
+                                                                                    nodes[i * y_count + j, 0] <= cx and \
+                                                                                    nodes[(
+                                                                                                      i + 1) * y_count + j, 0] <= cx and \
+                                                                            nodes[(i + 1) * y_count + (
+                                                                                        j + 1), 0] <= cx and nodes[
+                                                                        i * y_count + (j + 1), 0] <= cx and \
+                                                            nodes[i * y_count + j, 1] <= cy and nodes[
+                                                        (i + 1) * y_count + j, 1] <= cy and nodes[
+                                                (i + 1) * y_count + (j + 1), 1] <= cy and nodes[
+                                        i * y_count + (j + 1), 1] <= cy:
                 elements[2 * (i * (y_count - 1) + j), 0] = i * y_count + j
                 elements[2 * (i * (y_count - 1) + j), 1] = (i + 1) * y_count + j
                 elements[2 * (i * (y_count - 1) + j), 2] = i * y_count + (j + 1)
@@ -113,7 +123,7 @@ def annular_sector(xi_count, eta_count, alpha, min_radius, max_radius):
     hxi = 1.0 / float(xi_count - 1)
     points_xi = linspace(0.0, 1.0, num=xi_count)
     points_eta = linspace(0.0, 1.0, num=eta_count)
-    p = sqrt((min_radius - min_radius * cos(alpha * hxi))**2.0 + (min_radius * sin(alpha * hxi))**2.0)
+    p = sqrt((min_radius - min_radius * cos(alpha * hxi)) ** 2.0 + (min_radius * sin(alpha * hxi)) ** 2.0)
     q = 2.0 - p
     for i in range(xi_count):
         xi = points_xi[i]
@@ -134,7 +144,7 @@ def annular_sector(xi_count, eta_count, alpha, min_radius, max_radius):
     return nodes, elements
 
 
-def two_curved_domain(xi_count, eta_count, curve0, curve1):
+def two_curved_domain(xi_count, eta_count, left_curve, right_curve):
     from numpy import zeros
     from numpy import float_
     from numpy import int_
@@ -147,7 +157,44 @@ def two_curved_domain(xi_count, eta_count, curve0, curve1):
         xi = points_xi[i]
         for j in range(eta_count):
             eta = points_eta[j]
-            p = (1.0 - xi) * curve0(eta) + xi * curve1(eta)
+            p = (1.0 - xi) * left_curve(eta) + xi * right_curve(eta)
+            nodes[i * eta_count + j, 0] = p[0]
+            nodes[i * eta_count + j, 1] = p[1]
+    for i in range(xi_count - 1):
+        for j in range(eta_count - 1):
+            elements[i * (eta_count - 1) + j, 0] = i * eta_count + j
+            elements[i * (eta_count - 1) + j, 1] = (i + 1) * eta_count + j
+            elements[i * (eta_count - 1) + j, 2] = (i + 1) * eta_count + (j + 1)
+            elements[i * (eta_count - 1) + j, 3] = i * eta_count + j + 1
+
+    return nodes, elements
+
+
+def transfinite(xi_count, eta_count, xi_curve_bottom, xi_curve_top, eta_curve_left, eta_curve_right):
+    from numpy import zeros
+    from numpy import float_
+    from numpy import int_
+    from numpy import linspace
+    nodes = zeros((xi_count * eta_count, 2), dtype=float_)
+    elements = zeros(((xi_count - 1) * (eta_count - 1), 4), dtype=int_)
+    points_xi = linspace(0.0, 1.0, num=xi_count)
+    points_eta = linspace(0.0, 1.0, num=eta_count)
+    a = xi_curve_bottom(0.0)
+    b = xi_curve_top(0.0)
+    c = xi_curve_bottom(1.0)
+    d = xi_curve_top(1.0)
+    print ("bottom: ", xi_curve_bottom(0.0), xi_curve_bottom(1.0))
+    print ("top: ", xi_curve_top(0.0), xi_curve_top(1.0))
+    print ("left: ", eta_curve_left(0.0), eta_curve_left(1.0))
+    print ("right: ", eta_curve_right(0.0), eta_curve_right(1.0))
+    print (a, b, c, d)
+    for i in range(xi_count):
+        xi = points_xi[i]
+        for j in range(eta_count):
+            eta = points_eta[j]
+            p = (1.0 - xi) * eta_curve_left(eta) + xi * eta_curve_right(eta) + (1.0 - eta) * xi_curve_bottom(xi) \
+                + eta * xi_curve_top(xi) - (1.0 - xi) * (1.0 - eta) * a - (1.0 - xi) * eta * b - xi * (1.0 - eta) * c \
+                - xi * eta * d
             nodes[i * eta_count + j, 0] = p[0]
             nodes[i * eta_count + j, 1] = p[1]
     for i in range(xi_count - 1):
@@ -324,24 +371,59 @@ def draw_vtk(nodes,
     render_window.Render()
     render_window_interactor.Start()
 
+
 if __name__ == "__main__":
-    from numpy import  array
+    from numpy import array
     from interpolation import cubic_bezier_curve
+
     (nodes, quads) = rectangular_quads(11, 11, 0, 0, 1, 1)
     draw_vtk(nodes=nodes, elements=quads, title='Quadrilateral Grid', show_mesh=True, show_axes=True)
+
     (nodes, triangles) = rectangular_triangles(21, 11, 0, 0, 20, 10)
     draw_vtk(nodes=nodes, elements=triangles, title='Triangular Grid', show_mesh=True)
+
     (nodes, quads) = annular_sector(11, 11, 0.8, 1.0, 4.0)
     draw_vtk(nodes=nodes, elements=quads, show_mesh=True)
+
     p00 = array([1.0, 1.0])
     p01 = array([0.0, 2.0])
     p02 = array([1.0, 2.0])
     p03 = array([1.0, 3.0])
-    curve0 = lambda t: cubic_bezier_curve(t, p0=p00, p1=p01, p2=p02, p3=p03)
+
+
+    def left_curve(t): return cubic_bezier_curve(t, p0=p00, p1=p01, p2=p02, p3=p03)
+
+
     p10 = array([3.0, 1.0])
     p11 = array([4.0, 1.0])
     p12 = array([2.0, 3.0])
     p13 = array([3.5, 4.0])
-    curve1 = lambda t: cubic_bezier_curve(t, p0=p10, p1=p11, p2=p12, p3=p13)
-    (nodes, quads) = two_curved_domain(11, 11, curve0, curve1)
+
+
+    def right_curve(t): return cubic_bezier_curve(t, p0=p10, p1=p11, p2=p12, p3=p13)
+
+
+    (nodes, quads) = two_curved_domain(11, 11, left_curve=left_curve, right_curve=right_curve)
+    draw_vtk(nodes=nodes, elements=quads, show_mesh=True, background=(1.0, 1.0, 1.0))
+
+    p20 = array([1.0, 1.0])
+    p21 = array([2.0, 2.0])
+    p22 = array([2.0, 2.0])
+    p23 = array([3.0, 1.0])
+
+
+    def curve_bottom(t): return cubic_bezier_curve(t, p0=p20, p1=p21, p2=p22, p3=p23)
+
+
+    p30 = array([1.0, 3.0])
+    p31 = array([2.0, 4.0])
+    p32 = array([2.0, 4.0])
+    p33 = array([3.5, 4.0])
+
+
+    def curve_top(t): return cubic_bezier_curve(t, p0=p30, p1=p31, p2=p32, p3=p33)
+
+
+    (nodes, quads) = transfinite(21, 21, xi_curve_bottom=curve_bottom, xi_curve_top=curve_top,
+                                 eta_curve_left=left_curve, eta_curve_right=right_curve)
     draw_vtk(nodes=nodes, elements=quads, show_mesh=True, background=(1.0, 1.0, 1.0))
