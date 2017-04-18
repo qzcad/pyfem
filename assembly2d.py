@@ -29,8 +29,9 @@ def assembly_quads_stress_strain(nodes, elements, strain_stress_matrix, gauss_or
     (xi, eta, w) = legendre_quad(gauss_order)
     for element_index in range(elements_count):
         local = zeros((element_dimension, element_dimension))
+        element_nodes = nodes[elements[element_index, :], :]
         for i in range(len(w)):
-            (jacobian, shape, shape_dx, shape_dy) = iso_quad(nodes, elements, element_index, xi[i], eta[i])
+            (jacobian, shape, shape_dx, shape_dy) = iso_quad(element_nodes, xi[i], eta[i])
             b = array([
                 [shape_dx[0],   0.0,            shape_dx[1],    0.0,            shape_dx[2],    0.0,            shape_dx[3],    0.0],
                 [0.0,           shape_dy[0],    0.0,            shape_dy[1],    0.0,            shape_dy[2],    0.0,            shape_dy[3]],
@@ -77,8 +78,9 @@ def assembly_triangles_stress_strain(nodes, elements, strain_stress_matrix, gaus
     (xi, eta, w) = legendre_triangle(gauss_order)
     for element_index in range(elements_count):
         local = zeros((element_dimension, element_dimension))
+        element_nodes = nodes[elements[element_index, :], :]
         for i in range(len(w)):
-            (jacobian, shape, shape_dx, shape_dy) = iso_triangle(nodes, elements, element_index, xi[i], eta[i])
+            (jacobian, shape, shape_dx, shape_dy) = iso_triangle(element_nodes, xi[i], eta[i])
             b = array([
                 [shape_dx[0],   0.0,            shape_dx[1],    0.0,            shape_dx[2],    0.0        ],
                 [0.0,           shape_dy[0],    0.0,            shape_dy[1],    0.0,            shape_dy[2]],

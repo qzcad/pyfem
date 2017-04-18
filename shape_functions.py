@@ -2,12 +2,10 @@
 # -*- coding: utf-8 -*-
 
 
-def iso_quad(nodes, elements, element_index, xi, eta):
+def iso_quad(element_nodes, xi, eta):
     """
     Isoparametric shape function for a quadrilateral element (nodes must be ordered counterclockwise)
-    :param nodes: [nodes_count; 2]-matrix
-    :param elements: [elements_count; 4]-matrix
-    :param element_index: Index of element is being approximated
+    :param element_nodes: a sequence of nodes in the element: [4; 2]-matrix
     :param xi: Coordinate in the first parametric direction
     :param eta: Coordinate in the second parametric direction
     :return: Tuple: jacobian, array of the shape functions, array of the shape functions derivatives in the first
@@ -36,8 +34,10 @@ def iso_quad(nodes, elements, element_index, xi, eta):
         (1.0 + xi) / 4.0,
         (1.0 - xi) / 4.0
     ])  # derivatives of the shape functions in the second parametric direction
-    x = nodes[elements[element_index, :], 0]
-    y = nodes[elements[element_index, :], 1]
+    #x = nodes[elements[element_index, :], 0]
+    #y = nodes[elements[element_index, :], 1]
+    x = element_nodes[:, 0]
+    y = element_nodes[:, 1]
     jacobi = array([
         [sum(shape_dxi * x), sum(shape_dxi * y)],
         [sum(shape_deta * x), sum(shape_deta * y)]
@@ -49,12 +49,10 @@ def iso_quad(nodes, elements, element_index, xi, eta):
     return jacobian, shape, shape_dx, shape_dy
 
 
-def iso_triangle(nodes, elements, element_index, xi, eta):
+def iso_triangle(element_nodes, xi, eta):
     """
     Isoparametric shape function for a triangular element (nodes must be ordered counterclockwise)
-    :param nodes: [nodes_count; 2]-matrix
-    :param elements: [elements_count; 3]-matrix
-    :param element_index: Index of element is being approximated
+    :param element_nodes:  a sequence of nodes in the element: [3; 2]-matrix
     :param xi: Coordinate in the first parametric direction
     :param eta: Coordinate in the second parametric direction
     :return: Tuple: jacobian, array of the shape functions, array of the shape functions derivatives in the first
@@ -80,8 +78,8 @@ def iso_triangle(nodes, elements, element_index, xi, eta):
         0.0,
         1.0
     ])
-    x = nodes[elements[element_index, :], 0]
-    y = nodes[elements[element_index, :], 1]
+    x = element_nodes[:, 0]
+    y = element_nodes[:, 1]
     jacobi = array([
         [sum(shape_dxi * x), sum(shape_dxi * y)],
         [sum(shape_deta * x), sum(shape_deta * y)]
