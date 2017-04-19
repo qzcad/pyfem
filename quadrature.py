@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from numpy import array
 
 
 def legendre_interval(count):
+    # type: (int) -> (array, array)
     """
     Gauss-Legendre rules of the interval [-1; 1]
     :param count: Count of quadrature points
     :return tuple(array of points, array of weights). Both arrays are the same size.
     """
     from math import sqrt
-    from numpy import array
     if count <= 1:
         p = array([0.0])
         w = array([2.0])
@@ -53,13 +54,13 @@ def legendre_interval(count):
 
 
 def legendre_triangle(order):
+    # type: (int) -> (array, array, array)
     """
     Gauss-Legendre rules of the unit triangle
     :param order: Approximation order (1 - Linear, 2 - Quadratic, 3 - Cubic...)
     :return: tuple(array of coordinates in the first parametric direction, array of coordinates in the second parametric
     direction, array of weights). The arrays are the same size.
     """
-    from numpy import array
     if order <= 1:
         xi = array([1.0 / 3.0])
         eta = array([1.0 / 3.0])
@@ -104,6 +105,7 @@ def legendre_triangle(order):
 
 
 def legendre_tetrahedra(order):
+    # type: (int) -> (array, array, array, array)
     """
     Gauss-Legendre rules of the unit tetrahedra
     :param order: Approximation order (1 - Linear, 2 - Quadratic, 3 - Cubic)
@@ -111,7 +113,6 @@ def legendre_tetrahedra(order):
     direction, array of coordinates in the third parametric direction, array of weights). The arrays are the same size.
     """
     from math import sqrt
-    from numpy import array
     if order <= 1:
         xi = array([0.25])
         eta = array([0.25])
@@ -161,6 +162,7 @@ def legendre_tetrahedra(order):
 
 
 def legendre_quad(order):
+    # type: (int) -> (array, array, array)
     """
     Gauss-Legendre rules of the quad [-1; 1] x [-1; 1]
     :param order: Order of gaussian quadratures (count of quadrature points in each direction)
@@ -182,6 +184,7 @@ def legendre_quad(order):
 
 
 def legendre_hexahedra(order):
+    # type: (int) -> (array, array, array, array)
     """
     Gauss-Legendre rules of the hexahedra [-1; 1] x [-1; 1] x [-1; 1]
     :param order: Order of gaussian quadratures (count of quadrature points in each direction)
@@ -207,6 +210,7 @@ def legendre_hexahedra(order):
 
 
 def lobatto_interval(count):
+    # type: (int) -> (array, array)
     """
     Gauss-Lobatto rules of the interval [-1; 1]
     http://www.dam.brown.edu/people/alcyew/handouts/GLquad.pdf
@@ -254,6 +258,7 @@ def lobatto_interval(count):
 
 
 def lobatto_quad(order):
+    # type: (int) -> (array, array, array)
     """
     Gauss-Lobatto rules of the quad [-1; 1] x [-1; 1]
     :param order: Order of Lobatto's quadratures (count of quadrature points in each direction)
@@ -275,6 +280,7 @@ def lobatto_quad(order):
 
 
 def lobatto_hexahedra(order):
+    # type: (int) -> (array, array, array, array)
     """
     Gauss-Lobatto rules of the hexahedra [-1; 1] x [-1; 1] x [-1; 1]
     :param order: Order of Lobatto's quadratures (count of quadrature points in each direction
