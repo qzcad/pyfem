@@ -34,8 +34,6 @@ def iso_quad(element_nodes, xi, eta):
         (1.0 + xi) / 4.0,
         (1.0 - xi) / 4.0
     ])  # derivatives of the shape functions in the second parametric direction
-    #x = nodes[elements[element_index, :], 0]
-    #y = nodes[elements[element_index, :], 1]
     x = element_nodes[:, 0]
     y = element_nodes[:, 1]
     jacobi = array([

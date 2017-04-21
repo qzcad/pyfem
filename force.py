@@ -20,28 +20,28 @@ def nodal_force(nodes, freedom, force_function):
     return force
 
 
-def interval(func, a, b, count):
+def interval(func, a, b, gauss_order):
     """
     This routine integrates a function over an interval [a; b] using Gauss-Legendre rules
     :param a: Lower limit of the interval
     :param b: Upper limit of the interval
     :param func: A Python function or method to integrate
-    :param count: A count of quadrature points
+    :param gauss_order: A count of quadrature points
     :return:
     """
     from quadrature import legendre_interval
     from scipy.spatial.distance import euclidean
-    (p, w) = legendre_interval(count)
+    (p, w) = legendre_interval(gauss_order)
     j = euclidean(a, b) / 2.0
     s0 = 0.5 * (1.0 - p[0]) * func(0.5 * a * (1.0 - p[0]) + 0.5 * b * (1.0 + p[0])) * w[0] * j
     s1 = 0.5 * (1.0 + p[0]) * func(0.5 * a * (1.0 - p[0]) + 0.5 * b * (1.0 + p[0])) * w[0] * j
-    for i in range(1, count):
+    for i in range(1, gauss_order):
         s0 += 0.5 * (1.0 - p[i]) * func(0.5 * a * (1.0 - p[i]) + 0.5 * b * (1.0 + p[i])) * w[i] * j
         s1 += 0.5 * (1.0 + p[i]) * func(0.5 * a * (1.0 - p[i]) + 0.5 * b * (1.0 + p[i])) * w[i] * j
     return [s0, s1]
 
 
-def edge_force_quads(nodes, elements, freedom, force_function, gauss_order):
+def edge_force_quads(nodes, elements, freedom, force_function, gauss_order=3):
     """
     Assembly routine for processing of forces distributed over edges (quadrilaterals)
     :param nodes: A two dimensional array of coordinates
@@ -59,29 +59,23 @@ def edge_force_quads(nodes, elements, freedom, force_function, gauss_order):
         c = nodes[quad[2]]
         d = nodes[quad[3]]
         [f0, f1] = interval(force_function, a, b, gauss_order)
+        [f2, f3] = interval(force_function, b, c, gauss_order)
+        [f4, f5] = interval(force_function, c, d, gauss_order)
+        [f6, f7] = interval(force_function, d, a, gauss_order)
         for j in range(len(f0)):
             force[freedom * quad[0] + j] += f0[j]
             force[freedom * quad[1] + j] += f1[j]
-
-        [f0, f1] = interval(force_function, b, c, gauss_order)
-        for j in range(len(f0)):
-            force[freedom * quad[1] + j] += f0[j]
-            force[freedom * quad[2] + j] += f1[j]
-
-        [f0, f1] = interval(force_function, c, d, gauss_order)
-        for j in range(len(f0)):
-            force[freedom * quad[2] + j] += f0[j]
-            force[freedom * quad[3] + j] += f1[j]
-
-        [f0, f1] = interval(force_function, d, a, gauss_order)
-        for j in range(len(f0)):
-            force[freedom * quad[3] + j] += f0[j]
-            force[freedom * quad[0] + j] += f1[j]
+            force[freedom * quad[1] + j] += f2[j]
+            force[freedom * quad[2] + j] += f3[j]
+            force[freedom * quad[2] + j] += f4[j]
+            force[freedom * quad[3] + j] += f5[j]
+            force[freedom * quad[3] + j] += f6[j]
+            force[freedom * quad[0] + j] += f7[j]
 
     return force
 
 
-def edge_force_triangles(nodes, elements, freedom, force_function, gauss_order):
+def edge_force_triangles(nodes, elements, freedom, force_function, gauss_order=3):
     """
     Assembly routine for processing of forces distributed over edges (triangles)
     :param nodes: A two dimensional array of coordinates
@@ -98,18 +92,41 @@ def edge_force_triangles(nodes, elements, freedom, force_function, gauss_order):
         b = nodes[tri[1]]
         c = nodes[tri[2]]
         [f0, f1] = interval(force_function, a, b, gauss_order)
-        for j in range(len(f0)):
+        [f2, f3] = interval(force_function, b, c, gauss_order)
+        [f4, f5] = interval(force_function, c, a, gauss_order)
+        for j in range(freedom):
             force[freedom * tri[0] + j] += f0[j]
             force[freedom * tri[1] + j] += f1[j]
+            force[freedom * tri[1] + j] += f2[j]
+            force[freedom * tri[2] + j] += f3[j]
+            force[freedom * tri[2] + j] += f4[j]
+            force[freedom * tri[0] + j] += f5[j]
 
-        [f0, f1] = interval(force_function, b, c, gauss_order)
-        for j in range(len(f0)):
-            force[freedom * tri[1] + j] += f0[j]
-            force[freedom * tri[2] + j] += f1[j]
+    return force
 
-        [f0, f1] = interval(force_function, c, a, gauss_order)
-        for j in range(len(f0)):
-            force[freedom * tri[2] + j] += f0[j]
-            force[freedom * tri[0] + j] += f1[j]
+
+def volume_force_quads(nodes, elements, thickness, freedom, force_function, gauss_order):
+    from quadrature import legendre_quad
+    from shape_functions import iso_quad
+    from numpy import sum
+    dimension = len(nodes) * freedom
+    force = zeros(dimension)
+    element_nodes = 4
+    (xi, eta, w) = legendre_quad(gauss_order)
+    directions_number = len(nodes[0])
+    for element in elements:
+        fe = zeros([element_nodes, freedom])
+        vertices = nodes[element[:], :]
+        node = zeros([element_nodes, directions_number])
+        for i in range(len(w)):
+            (jacobian, shape, shape_dx, shape_dy) = iso_quad(vertices, xi[i], eta[i])
+            for j in range(directions_number):
+                node[:, j] = sum(shape * vertices[:, j])
+                node[:, j] = sum(shape * vertices[:, j])
+            for j in range(element_nodes):
+                fe[j, :] = fe[j, :] + shape[j] * force_function(node) * thickness * w[i] * jacobian
+        for i in range(element_nodes):
+            for j in range(freedom):
+                force[element[i] * freedom + j] += fe[i, j]
 
     return force

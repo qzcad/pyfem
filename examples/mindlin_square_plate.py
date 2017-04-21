@@ -10,6 +10,8 @@ if __name__ == "__main__":
     from quadrature import legendre_quad
     from  shape_functions import iso_quad
     from scipy.sparse.linalg import spsolve
+    from numpy import array
+    from force import volume_force_quads
     a = 1.0 # A side of a square plate
     h = 0.1 # A thickness of a square plate
     e = 10920.0 # The Young's modulus
@@ -20,19 +22,11 @@ if __name__ == "__main__":
     stiffness = assembly_quads_mindlin_plate(nodes, elements, h, e, nu)
     # force
     dimension = stiffness.shape[0]
-    force = zeros(dimension)
-    elements_count = len(elements)
-    element_nodes = 4
-    gauss_order = 3
-    (xi, eta, w) = legendre_quad(gauss_order)
-    for element_index in range(elements_count):
-        element = nodes[elements[element_index, :], :]
-        fe = zeros(element_nodes)
-        for i in range(len(w)):
-            (jacobian, shape, shape_dx, shape_dy) = iso_quad(element, xi[i], eta[i])
-            fe = fe + shape * q * w[i] * jacobian
-        for i in range(element_nodes):
-            force[elements[element_index, i] * 3] += fe[i]
+
+    def force_func(node): return array([q, 0.0, 0.0])
+
+    force = volume_force_quads(nodes=nodes, elements=elements, thickness=1.0, freedom=3, force_function=force_func, gauss_order=3)
+
     # boundary conditions
     for i in range(len(nodes)):
         if (abs(nodes[i, 0] - 0) < 0.0000001) or (abs(nodes[i, 0] - a) < 0.0000001) or (abs(nodes[i, 1] - 0) < 0.0000001) or (abs(nodes[i, 1] - a) < 0.0000001):
