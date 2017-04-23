@@ -6,13 +6,13 @@ from scipy.sparse import lil_matrix
 from print_progress import print_progress
 
 
-def assembly_quads_stress_strain(nodes, elements, strain_stress_matrix, gauss_order=2):
+def assembly_quads_stress_strain(nodes, elements, elasticity_matrix, gauss_order=2):
     # type: (array, array, array, int) -> lil_matrix
     """
     Assembly Routine for the Plane Stress-Strain State Analysis using a Mesh of Quadrilaterals
     :param nodes: A two-dimensional array of coordinates (nodes)
     :param elements: A two-dimensional array of quads (a mesh)
-    :param strain_stress_matrix: A two-dimensional array that represents stress-strain relations
+    :param elasticity_matrix: A two-dimensional array that represents stress-strain relations
     :param gauss_order: An order of gaussian quadratures (a count of points used to approximate in each direction)
     :return: A global stiffness matrix stored in the LIL sparse format (Row-based linked list sparse matrix)
     Order: u_0, v0, u_1, v_1, ..., u_(n-1), v_(n-1); n is nodes count
@@ -39,7 +39,7 @@ def assembly_quads_stress_strain(nodes, elements, strain_stress_matrix, gauss_or
                 [shape_dy[0],   shape_dx[0],    shape_dy[1],    shape_dx[1],    shape_dy[2],    shape_dx[2],    shape_dy[3],    shape_dx[3]]
             ])
             bt = b.conj().transpose()
-            local = local + bt.dot(strain_stress_matrix).dot(b) * jacobian * w[i]
+            local = local + bt.dot(elasticity_matrix).dot(b) * jacobian * w[i]
         for i in range(element_dimension):
             ii = elements[element_index, i / freedom] * freedom + i % freedom
             for j in range(i, element_dimension):
@@ -52,13 +52,13 @@ def assembly_quads_stress_strain(nodes, elements, strain_stress_matrix, gauss_or
     return global_matrix
 
 
-def assembly_triangles_stress_strain(nodes, elements, strain_stress_matrix, gauss_order=2):
+def assembly_triangles_stress_strain(nodes, elements, elasticity_matrix, gauss_order=2):
     # type: (array, array, array, int) -> lil_matrix
     """
     Assembly Routine for the Plane Stress-Strain State Analysis using a Mesh of Triangles
     :param nodes: A two-dimensional array of coordinates (nodes)
     :param elements: A two-dimensional array of quads (a mesh)
-    :param strain_stress_matrix: A two-dimensional array that represents stress-strain relations
+    :param elasticity_matrix: A two-dimensional array that represents stress-strain relations
     :param gauss_order: An order of gaussian quadratures (a count of points used to approximate in each direction)
     :return: A global stiffness matrix stored in the LIL sparse format (Row-based linked list sparse matrix)
     Order: u_0, v0, u_1, v_1, ..., u_(n-1), v_(n-1); n is nodes count
@@ -85,7 +85,7 @@ def assembly_triangles_stress_strain(nodes, elements, strain_stress_matrix, gaus
                 [shape_dy[0],   shape_dx[0],    shape_dy[1],    shape_dx[1],    shape_dy[2],    shape_dx[2]]
             ])
             bt = b.conj().transpose()
-            local = local + bt.dot(strain_stress_matrix).dot(b) * jacobian * w[i]
+            local = local + bt.dot(elasticity_matrix).dot(b) * jacobian * w[i]
         for i in range(element_dimension):
             ii = elements[element_index, i / freedom] * freedom + i % freedom
             for j in range(i, element_dimension):
@@ -98,15 +98,14 @@ def assembly_triangles_stress_strain(nodes, elements, strain_stress_matrix, gaus
     return global_matrix
 
 
-def assembly_quads_mindlin_plate(nodes, elements, thickness, young, nu, gauss_order=3, kappa=5.0/6.0):
+def assembly_quads_mindlin_plate(nodes, elements, thickness, elasticity_matrix, gauss_order=3, kappa=5.0/6.0):
     # type: (array, array, float, float, float, int, float) -> lil_matrix
     """
     Assembly Routine for the Mindlin Plates Analysis
     :param nodes: A two-dimensional array of plate's nodes coordinates
     :param elements: A two-dimensional array of plate's triangles (mesh)
     :param thickness: A thickness of a plate
-    :param young: The Young's Modulus of a material
-    :param nu: The Poisson's ratio of a material
+    :param elasticity_matrix: A two-dimensional array that represents stress-strain relations
     :param gauss_order: An order of gaussian quadratures
     :param kappa: The shear correction factor
     :return: Global stiffness matrix in the LIL sparse format (Row-based linked list sparse matrix)
@@ -114,7 +113,7 @@ def assembly_quads_mindlin_plate(nodes, elements, thickness, young, nu, gauss_or
     """
     from quadrature import legendre_quad
     from shape_functions import iso_quad
-    from stress_strain_matrix import plane_stress_isotropic
+
     print "The assembly routine is started"
     freedom = 3
     element_nodes = 4
@@ -124,7 +123,7 @@ def assembly_quads_mindlin_plate(nodes, elements, thickness, young, nu, gauss_or
     global_matrix = lil_matrix((dimension, dimension))
     elements_count = len(elements)
     (xi, eta, w) = legendre_quad(gauss_order)
-    df = plane_stress_isotropic(young, nu)
+    df = elasticity_matrix
     dc = array([
         [df[2, 2], 0.0],
         [0.0, df[2, 2]]
@@ -144,6 +143,79 @@ def assembly_quads_mindlin_plate(nodes, elements, thickness, young, nu, gauss_or
                 [shape_dy[0], 0.0, shape[0], shape_dy[1], 0.0, shape[1], shape_dy[2], 0.0, shape[2], shape_dy[3], 0.0, shape[3]]
             ])
             local = local + (thickness**3.0 / 12.0 * (bf.transpose().dot(df).dot(bf)) + kappa * thickness * (bc.transpose().dot(dc).dot(bc))) * jacobian * w[i]
+        for i in range(element_dimension):
+            ii = elements[element_index, i / freedom] * freedom + i % freedom
+            for j in range(i, element_dimension):
+                jj = elements[element_index, j / freedom] * freedom + j % freedom
+                global_matrix[ii, jj] += local[i, j]
+                if i != j:
+                    global_matrix[jj, ii] = global_matrix[ii, jj]
+        print_progress(element_index, elements_count - 1)
+    print "\nThe assembly routine is completed"
+    return global_matrix
+
+
+def assembly_quads_mindlin_plate_laminated(nodes, elements, thicknesses, elasticity_matrices, gauss_order=3, kappa=5.0 / 6.0):
+    # type: (array, array, float, float, float, int, float) -> lil_matrix
+    """
+    Assembly Routine for the Mindlin Plates Analysis
+    :param nodes: A two-dimensional array of plate's nodes coordinates
+    :param elements: A two-dimensional array of plate's triangles (mesh)
+    :param thicknesses: An array of thicknesses that stores thicknesses of each layer
+    :param elasticity_matrices: A list or a sequence of two-dimensional arrays. Each array represents stress-strain relations of corresponded layer
+    :param gauss_order: An order of gaussian quadratures
+    :param kappa: The shear correction factor
+    :return: Global stiffness matrix in the LIL sparse format (Row-based linked list sparse matrix)
+    Order: u_0, v0, u_1, v_1, ..., u_(n-1), v_(n-1); n - nodes count
+    """
+    from quadrature import legendre_quad
+    from shape_functions import iso_quad
+    from numpy import sum
+
+    print "The assembly routine is started"
+    freedom = 5
+    element_nodes = 4
+    nodes_count = len(nodes)
+    dimension = freedom * nodes_count
+    element_dimension = freedom * element_nodes
+    global_matrix = lil_matrix((dimension, dimension))
+    elements_count = len(elements)
+    (xi, eta, w) = legendre_quad(gauss_order)
+
+    h = sum(thicknesses)
+
+    for element_index in range(elements_count):
+        local = zeros((element_dimension, element_dimension))
+        element = nodes[elements[element_index, :], :]
+        for i in range(len(w)):
+            (jacobian, shape, shape_dx, shape_dy) = iso_quad(element, xi[i], eta[i])
+            bm = array([
+                [shape_dx[0], 0.0,         0.0, 0.0, 0.0, shape_dx[1], 0.0,         0.0, 0.0, 0.0, shape_dx[2], 0.0,         0.0, 0.0, 0.0, shape_dx[3], 0.0,         0.0, 0.0, 0.0],
+                [0.0,         shape_dy[0], 0.0, 0.0, 0.0, 0.0,         shape_dy[1], 0.0, 0.0, 0.0, 0.0,         shape_dy[2], 0.0, 0.0, 0.0, 0.0,         shape_dy[3], 0.0, 0.0, 0.0],
+                [shape_dy[0], shape_dx[0], 0.0, 0.0, 0.0, shape_dy[1], shape_dx[1], 0.0, 0.0, 0.0, shape_dy[2], shape_dx[2], 0.0, 0.0, 0.0, shape_dy[3], shape_dx[3], 0.0, 0.0, 0.0]
+            ])
+            bf = array([
+                [0.0, 0.0, 0.0, shape_dx[0], 0.0,         0.0, 0.0, 0.0, shape_dx[1], 0.0,         0.0, 0.0, 0.0, shape_dx[2], 0.0,         0.0, 0.0, 0.0, shape_dx[3], 0.0],
+                [0.0, 0.0, 0.0, 0.0,         shape_dy[0], 0.0, 0.0, 0.0, 0.0,         shape_dy[1], 0.0, 0.0, 0.0, 0.0,         shape_dy[2], 0.0, 0.0, 0.0, 0.0,         shape_dy[3]],
+                [0.0, 0.0, 0.0, shape_dy[0], shape_dx[0], 0.0, 0.0, 0.0, shape_dy[1], shape_dx[1], 0.0, 0.0, 0.0, shape_dy[2], shape_dx[2], 0.0, 0.0, 0.0, shape_dy[3], shape_dx[3]]
+            ])
+            bc = array([
+                [0.0, 0.0, shape_dx[0], shape[0], 0.0, 0.0, 0.0, shape_dx[1], shape[1], 0.0, 0.0, 0.0, shape_dx[2], shape[2], 0.0, 0.0, 0.0, shape_dx[3], shape[3], 0.0],
+                [0.0, 0.0, shape_dy[0], 0.0, shape[0], 0.0, 0.0, shape_dy[1], 0.0, shape[1], 0.0, 0.0, shape_dy[2], 0.0, shape[2], 0.0, 0.0, shape_dy[3], 0.0, shape[3]]
+            ])
+            z0 = -h / 2.0
+            for j in range(thicknesses):
+                z1 = z0 + thicknesses[j]
+                df = elasticity_matrices[j]
+                dc = array([
+                    [df[2, 2], 0.0],
+                    [0.0, df[2, 2]]
+                ])
+                local = local + (z1 - z0) * (bm.transpose().dot(df).dot(bm)) * jacobian * w[i]
+                local = local + (z1**2.0 - z0**2.0) / 2.0 * (bm.transpose().dot(df).dot(bf)) * jacobian * w[i]
+                local = local + (z1**2.0 - z0**2.0) / 2.0 * (bf.transpose().dot(df).dot(bm)) * jacobian * w[i]
+                local = local + (z1**3.0 - z0**3.0) / 3.0 * (bf.transpose().dot(df).dot(bf)) * jacobian * w[i]
+                local = local + (z1 - z0) * kappa * (bc.transpose().dot(dc).dot(bc)) * jacobian * w[i]
         for i in range(element_dimension):
             ii = elements[element_index, i / freedom] * freedom + i % freedom
             for j in range(i, element_dimension):
