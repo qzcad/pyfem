@@ -155,6 +155,30 @@ def assembly_quads_mindlin_plate(nodes, elements, thickness, young, nu, gauss_or
     print "\nThe assembly routine is completed"
     return global_matrix
 
+
+def assembly_initial_value(stiffness, force, position, value=0.0):
+    """
+    Assembly routine modifies a linear system of equations. Unknown variable at the specified position will be equal to 
+    the specified value 
+    :param stiffness: A global matrix (mutable data type)
+    :param force: A column-vector (mutable data type)
+    :param position: Number of unknown variable at the linear system  
+    :param value: A value which variable at specified position must be equal
+    :return: None
+    """
+    dimension = stiffness.shape[0]
+    for j in range(dimension):
+        if j != position:
+            force[j] -= stiffness[position, j] * value
+    for j in range(dimension):
+        if stiffness[position, j] != 0.0:
+            stiffness[position, j] = 0.0
+        if stiffness[j, position] != 0.0:
+            stiffness[j, position] = 0.0
+    stiffness[position, position] = 1.0
+    force[position] = value
+
+
 if __name__ == "__main__":
     from mesh2d import rectangular_quads
     from mesh2d import rectangular_triangles

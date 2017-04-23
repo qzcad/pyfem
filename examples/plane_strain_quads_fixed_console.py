@@ -6,6 +6,7 @@ if __name__ == "__main__":
     from mesh2d import rectangular_quads
     from mesh2d import draw_vtk
     from assembly2d import assembly_quads_stress_strain
+    from assembly2d import assembly_initial_value
     from force import nodal_force
     from stress_strain_matrix import plane_strain_isotropic
     from scipy.sparse.linalg import spsolve
@@ -24,7 +25,6 @@ if __name__ == "__main__":
 
     (nodes, elements) = rectangular_quads(x_count=n, y_count=m, x_origin=0.0, y_origin=-c, width=l, height=2.0 * c)
     stiffness = assembly_quads_stress_strain(nodes, elements, d)
-    dimension = stiffness.shape[0]
 
 
     def force_func(node):
@@ -38,22 +38,15 @@ if __name__ == "__main__":
 
     for i in range(len(nodes)):
         if abs(l - nodes[i, 0]) < 0.0000001:
-            for j in range(dimension):
-                if stiffness[2 * i, j] != 0.0:
-                    stiffness[2 * i, j] = 0.0
-                if stiffness[j, 2 * i] != 0.0:
-                    stiffness[j, 2 * i] = 0.0
-                if stiffness[2 * i + 1, j] != 0.0:
-                    stiffness[2 * i + 1, j] = 0.0
-                if stiffness[j, 2 * i + 1] != 0.0:
-                    stiffness[j, 2 * i + 1] = 0.0
-            stiffness[2 * i, 2 * i] = 1.0
-            force[2 * i] = 0.0
-            stiffness[2 * i + 1, 2 * i + 1] = 1.0
-            force[2 * i + 1] = 0.0
+            assembly_initial_value(stiffness, force, 2 * i, 0.0)
+            assembly_initial_value(stiffness, force, 2 * i + 1, 0.0)
+
     stiffness = stiffness.tocsr()
     x = spsolve(stiffness, force)
-    print(min(x[0::2]), " <= X <= ", max(x[0::2]))
-    print(min(x[1::2]), " <= Y <= ", max(x[1::2]))
-    draw_vtk(nodes, elements, x[0::2], title="u", show_labels=True)
-    draw_vtk(nodes, elements, x[1::2], title="v", show_labels=True)
+
+    u = x[0::2]
+    v = x[1::2]
+    print(min(u), " <= u <= ", max(u))
+    print(min(v), " <= Y <= ", max(v))
+    draw_vtk(nodes, elements, u, title="u", show_labels=True)
+    draw_vtk(nodes, elements, v, title="v", show_labels=True)
