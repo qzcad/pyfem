@@ -14,7 +14,7 @@ def assembly_quads_stress_strain(nodes, elements, elasticity_matrix, gauss_order
     :param elements: A two-dimensional array of quads (a mesh)
     :param elasticity_matrix: A two-dimensional array that represents stress-strain relations
     :param gauss_order: An order of gaussian quadratures (a count of points used to approximate in each direction)
-    :return: A global stiffness matrix stored in the LIL sparse format (Row-based linked list sparse matrix)
+    :return: A global stiffness matrix stored in the CSR sparse format
     Order: u_0, v0, u_1, v_1, ..., u_(n-1), v_(n-1); n is nodes count
     """
     from quadrature import legendre_quad
@@ -49,7 +49,7 @@ def assembly_quads_stress_strain(nodes, elements, elasticity_matrix, gauss_order
                     global_matrix[jj, ii] = global_matrix[ii, jj]
         print_progress(element_index, elements_count - 1)
     print "\nThe assembly routine is completed."
-    return global_matrix
+    return global_matrix.tocsr()
 
 
 def assembly_triangles_stress_strain(nodes, elements, elasticity_matrix, gauss_order=2):
@@ -60,7 +60,7 @@ def assembly_triangles_stress_strain(nodes, elements, elasticity_matrix, gauss_o
     :param elements: A two-dimensional array of quads (a mesh)
     :param elasticity_matrix: A two-dimensional array that represents stress-strain relations
     :param gauss_order: An order of gaussian quadratures (a count of points used to approximate in each direction)
-    :return: A global stiffness matrix stored in the LIL sparse format (Row-based linked list sparse matrix)
+    :return: A global stiffness matrix stored in the CSR sparse format
     Order: u_0, v0, u_1, v_1, ..., u_(n-1), v_(n-1); n is nodes count
     """
     from quadrature import legendre_triangle
@@ -95,7 +95,7 @@ def assembly_triangles_stress_strain(nodes, elements, elasticity_matrix, gauss_o
                     global_matrix[jj, ii] = global_matrix[ii, jj]
         print_progress(element_index, elements_count - 1)
     print "\nThe assembly routine is completed"
-    return global_matrix
+    return global_matrix.tocsr()
 
 
 def assembly_quads_mindlin_plate(nodes, elements, thickness, elasticity_matrix, gauss_order=3, kappa=5.0/6.0):
@@ -108,7 +108,7 @@ def assembly_quads_mindlin_plate(nodes, elements, thickness, elasticity_matrix, 
     :param elasticity_matrix: A two-dimensional array that represents stress-strain relations
     :param gauss_order: An order of gaussian quadratures
     :param kappa: The shear correction factor
-    :return: Global stiffness matrix in the LIL sparse format (Row-based linked list sparse matrix)
+    :return: Global stiffness matrix in the CSR sparse format
     Order: u_0, v0, u_1, v_1, ..., u_(n-1), v_(n-1); n - nodes count
     """
     from quadrature import legendre_quad
@@ -152,7 +152,7 @@ def assembly_quads_mindlin_plate(nodes, elements, thickness, elasticity_matrix, 
                     global_matrix[jj, ii] = global_matrix[ii, jj]
         print_progress(element_index, elements_count - 1)
     print "\nThe assembly routine is completed"
-    return global_matrix
+    return global_matrix.tocsr()
 
 
 def assembly_quads_mindlin_plate_laminated(nodes, elements, thicknesses, elasticity_matrices, gauss_order=3, kappa=5.0 / 6.0):
@@ -165,7 +165,7 @@ def assembly_quads_mindlin_plate_laminated(nodes, elements, thicknesses, elastic
     :param elasticity_matrices: A list or a sequence of two-dimensional arrays. Each array represents stress-strain relations of corresponded layer
     :param gauss_order: An order of gaussian quadratures
     :param kappa: The shear correction factor
-    :return: Global stiffness matrix in the LIL sparse format (Row-based linked list sparse matrix)
+    :return: Global stiffness matrix in the CSR sparse format
     Order: u_0, v0, u_1, v_1, ..., u_(n-1), v_(n-1); n - nodes count
     """
     from quadrature import legendre_quad
@@ -225,28 +225,32 @@ def assembly_quads_mindlin_plate_laminated(nodes, elements, thicknesses, elastic
                     global_matrix[jj, ii] = global_matrix[ii, jj]
         print_progress(element_index, elements_count - 1)
     print "\nThe assembly routine is completed"
-    return global_matrix
+    return global_matrix.tocsr()
 
 
 def assembly_initial_value(stiffness, force, position, value=0.0):
     """
     Assembly routine modifies a linear system of equations. Unknown variable at the specified position will be equal to 
     the specified value 
-    :param stiffness: A global matrix (mutable data type)
+    :param stiffness: A global matrix (mutable data type) of format CSR
     :param force: A column-vector (mutable data type)
     :param position: Number of unknown variable at the linear system  
     :param value: A value which variable at specified position must be equal
     :return: None
     """
-    dimension = stiffness.shape[0]
-    for j in range(dimension):
-        if j != position:
-            force[j] -= stiffness[position, j] * value
-    for j in range(dimension):
-        if stiffness[position, j] != 0.0:
-            stiffness[position, j] = 0.0
-        if stiffness[j, position] != 0.0:
-            stiffness[j, position] = 0.0
+    from scipy.sparse import  csr_matrix
+    if not isinstance(stiffness, csr_matrix):
+        raise ValueError('Stiffness matrix given must be of CSR format.')
+    stiffness.data[stiffness.indptr[position]:stiffness.indptr[position + 1]] = 0.0
+    # dimension = stiffness.shape[0]
+    # for j in range(dimension):
+    #     if j != position:
+    #         force[j] -= stiffness[position, j] * value
+    # for j in range(dimension):
+    #     if stiffness[position, j] != 0.0:
+    #         stiffness[position, j] = 0.0
+    #     if stiffness[j, position] != 0.0:
+    #         stiffness[j, position] = 0.0
     stiffness[position, position] = 1.0
     force[position] = value
 

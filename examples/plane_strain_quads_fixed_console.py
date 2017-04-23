@@ -26,6 +26,8 @@ if __name__ == "__main__":
     (nodes, elements) = rectangular_quads(x_count=n, y_count=m, x_origin=0.0, y_origin=-c, width=l, height=2.0 * c)
     stiffness = assembly_quads_stress_strain(nodes, elements, d)
 
+    print("Evaluating force...")
+
 
     def force_func(node):
         if abs(node[0]) < 0.0000001:
@@ -36,12 +38,13 @@ if __name__ == "__main__":
 
     force = nodal_force(nodes=nodes, freedom=2, force_function=force_func)
 
+    print("Evaluating boundary conditions...")
     for i in range(len(nodes)):
         if abs(l - nodes[i, 0]) < 0.0000001:
             assembly_initial_value(stiffness, force, 2 * i, 0.0)
             assembly_initial_value(stiffness, force, 2 * i + 1, 0.0)
 
-    stiffness = stiffness.tocsr()
+    print("Solving a system of linear equations")
     x = spsolve(stiffness, force)
 
     u = x[0::2]

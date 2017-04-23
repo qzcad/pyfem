@@ -17,24 +17,26 @@ if __name__ == "__main__":
     e = 203200.0 # The Young's modulus
     nu = 0.3 # The Poisson's ratio
     q = 0.05 # A load intensity
-    n = 101
+    n = 201
     (nodes, elements) = rectangular_quads(x_count=n, y_count=n, x_origin=0.0, y_origin=0., width=a, height=a)
+
     stiffness = assembly_quads_mindlin_plate(nodes, elements, h, plane_stress_isotropic(e, nu))
-    # force
-    dimension = stiffness.shape[0]
+
+    print("Evaluating force...")
 
     def force_func(node): return array([q, 0.0, 0.0])
 
     force = volume_force_quads(nodes=nodes, elements=elements, thickness=1.0, freedom=3, force_function=force_func, gauss_order=3)
 
-    # boundary conditions
+    print("Evaluating boundary conditions...")
     for i in range(len(nodes)):
         if (abs(nodes[i, 0] - 0) < 0.0000001) or (abs(nodes[i, 0] - a) < 0.0000001) or (abs(nodes[i, 1] - 0) < 0.0000001) or (abs(nodes[i, 1] - a) < 0.0000001):
             assembly_initial_value(stiffness, force, 3 * i, 0.0)
             assembly_initial_value(stiffness, force, 3 * i + 1, 0.0)
             assembly_initial_value(stiffness, force, 3 * i + 2, 0.0)
-    # linear system
-    stiffness = stiffness.tocsr()
+
+    print("Solving a system of linear equations")
+
     x = spsolve(stiffness, force)
 
     w = x[0::3]

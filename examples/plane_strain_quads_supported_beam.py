@@ -23,6 +23,8 @@ if __name__ == "__main__":
     (nodes, elements) = rectangular_quads(x_count=n, y_count=m, x_origin=-l, y_origin=-c, width=2.0 * l, height=2.0 * c)
     stiffness = assembly_quads_stress_strain(nodes, elements, d)
 
+    print("Evaluating force...")
+
 
     def force_func(node):
         if abs(c - node[1]) < 0.0000001:
@@ -32,11 +34,12 @@ if __name__ == "__main__":
 
     force = edge_force_quads(nodes, elements, 2, force_func, 3)
 
+    print("Evaluating boundary conditions...")
     for i in range(len(nodes)):
         if abs(-c - nodes[i, 1]) < 0.0000001 and (abs(l - nodes[i, 0]) < 0.0000001 or abs(-l - nodes[i, 0]) < 0.0000001):
             assembly_initial_value(stiffness, force, 2 * i + 1, 0.0)
 
-    stiffness = stiffness.tocsr()
+    print("Solving a system of linear equations")
     x, info = cg(stiffness, force, tol=1e-8)
 
     u = x[0::2]
