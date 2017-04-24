@@ -204,7 +204,7 @@ def assembly_quads_mindlin_plate_laminated(nodes, elements, thicknesses, elastic
                 [0.0, 0.0, shape_dy[0], 0.0, shape[0], 0.0, 0.0, shape_dy[1], 0.0, shape[1], 0.0, 0.0, shape_dy[2], 0.0, shape[2], 0.0, 0.0, shape_dy[3], 0.0, shape[3]]
             ])
             z0 = -h / 2.0
-            for j in range(thicknesses):
+            for j in range(len(thicknesses)):
                 z1 = z0 + thicknesses[j]
                 df = elasticity_matrices[j]
                 dc = array([
@@ -216,6 +216,8 @@ def assembly_quads_mindlin_plate_laminated(nodes, elements, thicknesses, elastic
                 local = local + (z1**2.0 - z0**2.0) / 2.0 * (bf.transpose().dot(df).dot(bm)) * jacobian * w[i]
                 local = local + (z1**3.0 - z0**3.0) / 3.0 * (bf.transpose().dot(df).dot(bf)) * jacobian * w[i]
                 local = local + (z1 - z0) * kappa * (bc.transpose().dot(dc).dot(bc)) * jacobian * w[i]
+                z0 = z1
+
         for i in range(element_dimension):
             ii = elements[element_index, i / freedom] * freedom + i % freedom
             for j in range(i, element_dimension):
