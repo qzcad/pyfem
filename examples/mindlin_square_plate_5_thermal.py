@@ -10,9 +10,9 @@ if __name__ == "__main__":
     from shape_functions import iso_quad
     from stress_strain_matrix import plane_stress_isotropic
     from force import thermal_force_plate_5
-    from scipy.sparse.linalg import spsolve
-    from scipy.sparse import lil_matrix
-    from numpy import array, zeros
+    from scipy.sparse.linalg import spsolve, eigs
+    from scipy.sparse import lil_matrix, csr_matrix
+    from numpy import array, zeros, ix_
     from quadrature import legendre_quad
 
     a = 10.0 # A side of a square plate
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     e = 1.0 # The Young's modulus
     nu = 0.3 # The Poisson's ratio
     alpha = 1.0E-6
-    n = 101
+    n = 21
     freedom = 5
     d = plane_stress_isotropic(e, nu)
     (nodes, elements) = rectangular_quads(x_count=n, y_count=n, x_origin=0.0, y_origin=0., width=a, height=a)
@@ -105,48 +105,88 @@ if __name__ == "__main__":
     draw_vtk(nodes, elements, sigma_y, title="sigma y", show_labels=True)
     draw_vtk(nodes, elements, tau_xy, title="tau xy", show_labels=True)
 
-    # element_nodes = 4
-    # nodes_count = len(nodes)
-    # dimension = freedom * nodes_count
-    # element_dimension = freedom * element_nodes
-    # geometric_matrix = lil_matrix((dimension, dimension))
-    # (xi, eta, w) = legendre_quad(3)
-    #
-    # for element in elements:
-    #     local = zeros((element_dimension, element_dimension))
-    #     vertices = nodes[element[:], :]
-    #     displacement = zeros(freedom * 4)
-    #     for j in range(freedom):
-    #         displacement[j::freedom] = x[element[:] * freedom + j]
-    #
-    #     for i in range(len(w)):
-    #         (jacobian, shape, shape_dx, shape_dy) = iso_quad(vertices, xi[i], eta[i])
-    #         bm = array([
-    #             [shape_dx[0], 0.0, 0.0, 0.0, 0.0, shape_dx[1], 0.0, 0.0, 0.0, 0.0, shape_dx[2], 0.0, 0.0, 0.0, 0.0,
-    #              shape_dx[3], 0.0, 0.0, 0.0, 0.0],
-    #             [0.0, shape_dy[0], 0.0, 0.0, 0.0, 0.0, shape_dy[1], 0.0, 0.0, 0.0, 0.0, shape_dy[2], 0.0, 0.0, 0.0, 0.0,
-    #              shape_dy[3], 0.0, 0.0, 0.0],
-    #             [shape_dy[0], shape_dx[0], 0.0, 0.0, 0.0, shape_dy[1], shape_dx[1], 0.0, 0.0, 0.0, shape_dy[2],
-    #              shape_dx[2], 0.0, 0.0, 0.0, shape_dy[3], shape_dx[3], 0.0, 0.0, 0.0]
-    #         ])
-    #         sigma = d.dot(bm).dot(displacement)
-    #         s0 = array([
-    #             [sigma[0], sigma[2]],
-    #             [sigma[2], sigma[1]]
-    #         ])
-    #         bm1 = array([
-    #             [shape_dx[0], 0.0, 0.0, 0.0, 0.0, shape_dx[1], 0.0, 0.0, 0.0, 0.0, shape_dx[2], 0.0, 0.0, 0.0, 0.0, shape_dx[3], 0.0, 0.0, 0.0, 0.0],
-    #             [shape_dy[0], 0.0, 0.0, 0.0, 0.0, shape_dy[1], 0.0, 0.0, 0.0, 0.0, shape_dy[2], 0.0, 0.0, 0.0, 0.0, shape_dy[3], 0.0, 0.0, 0.0, 0.0]
-    #         ])
-    #         bm2 = array([
-    #             [0.0, shape_dx[0], 0.0, 0.0, 0.0, 0.0, shape_dx[1], 0.0, 0.0, 0.0, 0.0, shape_dx[2], 0.0, 0.0, 0.0, 0.0, shape_dx[3], 0.0, 0.0, 0.0],
-    #             [0.0, shape_dy[0], 0.0, 0.0, 0.0, 0.0, shape_dy[1], 0.0, 0.0, 0.0, 0.0, shape_dy[2], 0.0, 0.0, 0.0, 0.0, shape_dy[3], 0.0, 0.0, 0.0]
-    #         ])
-    #
-    #     for i in range(element_dimension):
-    #         ii = element[i / freedom] * freedom + i % freedom
-    #         for j in range(i, element_dimension):
-    #             jj = element[j / freedom] * freedom + j % freedom
-    #             global_matrix[ii, jj] += local[i, j]
-    #             if i != j:
-    #                 global_matrix[jj, ii] = global_matrix[ii, jj]
+    element_nodes = 4
+    nodes_count = len(nodes)
+    dimension = freedom * nodes_count
+    element_dimension = freedom * element_nodes
+    geometric_matrix = lil_matrix((dimension, dimension))
+    (xi, eta, w) = legendre_quad(3)
+
+    for element in elements:
+        local = zeros((element_dimension, element_dimension))
+        vertices = nodes[element[:], :]
+        displacement = zeros(freedom * 4)
+        for j in range(freedom):
+            displacement[j::freedom] = x[element[:] * freedom + j]
+
+        for i in range(len(w)):
+            (jacobian, shape, shape_dx, shape_dy) = iso_quad(vertices, xi[i], eta[i])
+            bm = array([
+                [shape_dx[0], 0.0, 0.0, 0.0, 0.0, shape_dx[1], 0.0, 0.0, 0.0, 0.0, shape_dx[2], 0.0, 0.0, 0.0, 0.0,
+                 shape_dx[3], 0.0, 0.0, 0.0, 0.0],
+                [0.0, shape_dy[0], 0.0, 0.0, 0.0, 0.0, shape_dy[1], 0.0, 0.0, 0.0, 0.0, shape_dy[2], 0.0, 0.0, 0.0, 0.0,
+                 shape_dy[3], 0.0, 0.0, 0.0],
+                [shape_dy[0], shape_dx[0], 0.0, 0.0, 0.0, shape_dy[1], shape_dx[1], 0.0, 0.0, 0.0, shape_dy[2],
+                 shape_dx[2], 0.0, 0.0, 0.0, shape_dy[3], shape_dx[3], 0.0, 0.0, 0.0]
+            ])
+            sigma = d.dot(bm).dot(displacement)
+            s0 = array([
+                [sigma[0], sigma[2]],
+                [sigma[2], sigma[1]]
+            ])
+            bm1 = array([
+                [shape_dx[0], 0.0, 0.0, 0.0, 0.0, shape_dx[1], 0.0, 0.0, 0.0, 0.0, shape_dx[2], 0.0, 0.0, 0.0, 0.0, shape_dx[3], 0.0, 0.0, 0.0, 0.0],
+                [shape_dy[0], 0.0, 0.0, 0.0, 0.0, shape_dy[1], 0.0, 0.0, 0.0, 0.0, shape_dy[2], 0.0, 0.0, 0.0, 0.0, shape_dy[3], 0.0, 0.0, 0.0, 0.0]
+            ])
+            bm2 = array([
+                [0.0, shape_dx[0], 0.0, 0.0, 0.0, 0.0, shape_dx[1], 0.0, 0.0, 0.0, 0.0, shape_dx[2], 0.0, 0.0, 0.0, 0.0, shape_dx[3], 0.0, 0.0, 0.0],
+                [0.0, shape_dy[0], 0.0, 0.0, 0.0, 0.0, shape_dy[1], 0.0, 0.0, 0.0, 0.0, shape_dy[2], 0.0, 0.0, 0.0, 0.0, shape_dy[3], 0.0, 0.0, 0.0]
+            ])
+            bb = array([
+                [0.0, 0.0, shape_dx[0], 0.0, 0.0, 0.0, 0.0, shape_dx[1], 0.0, 0.0, 0.0, 0.0, shape_dx[2], 0.0, 0.0, 0.0, 0.0, shape_dx[3], 0.0, 0.0],
+                [0.0, 0.0, shape_dy[0], 0.0, 0.0, 0.0, 0.0, shape_dy[1], 0.0, 0.0, 0.0, 0.0, shape_dy[2], 0.0, 0.0, 0.0, 0.0, shape_dy[3], 0.0, 0.0]
+            ])
+            bs1 = array([
+                [0.0, 0.0, 0.0, shape_dx[0], 0.0, 0.0, 0.0, 0.0, shape_dx[1], 0.0, 0.0, 0.0, 0.0, shape_dx[2], 0.0, 0.0, 0.0, 0.0, shape_dx[3], 0.0],
+                [0.0, 0.0, 0.0, shape_dy[0], 0.0, 0.0, 0.0, 0.0, shape_dy[1], 0.0, 0.0, 0.0, 0.0, shape_dy[2], 0.0, 0.0, 0.0, 0.0, shape_dy[3], 0.0]
+            ])
+            bs2 = array([
+                [0.0, 0.0, 0.0, 0.0, shape_dx[0], 0.0, 0.0, 0.0, 0.0, shape_dx[1], 0.0, 0.0, 0.0, 0.0, shape_dx[2], 0.0, 0.0, 0.0, 0.0, shape_dx[3]],
+                [0.0, 0.0, 0.0, 0.0, shape_dy[0], 0.0, 0.0, 0.0, 0.0, shape_dy[1], 0.0, 0.0, 0.0, 0.0, shape_dy[2], 0.0, 0.0, 0.0, 0.0, shape_dy[3]]
+            ])
+            local = local + h * (bm1.transpose().dot(s0).dot(bm1) + bm2.transpose().dot(s0).dot(bm2) +
+                                 bb.transpose().dot(s0).dot(bb)) * jacobian * w[i] + \
+                    h**3.0 / 12.0 * (bs1.transpose().dot(s0).dot(bs1) +
+                                     bs2.transpose().dot(s0).dot(bs2)) * jacobian * w[i]
+
+        for i in range(element_dimension):
+            ii = element[i / freedom] * freedom + i % freedom
+            for j in range(i, element_dimension):
+                jj = element[j / freedom] * freedom + j % freedom
+                geometric_matrix[ii, jj] += local[i, j]
+                if i != j:
+                    geometric_matrix[jj, ii] = geometric_matrix[ii, jj]
+
+    active = range(dimension)
+    for i in range(len(nodes)):
+        if (abs(nodes[i, 0] - 0) < 0.0000001) or (abs(nodes[i, 0] - a) < 0.0000001):
+            active.remove(freedom * i)
+            # active.remove(freedom * i + 1)
+            # active.remove(freedom * i + 2)
+            # active.remove(freedom * i + 3)
+            active.remove(freedom * i + 4)
+        if (abs(nodes[i, 1] - 0) < 0.0000001) or (abs(nodes[i, 1] - a) < 0.0000001):
+            # active.remove(freedom * i)
+            active.remove(freedom * i + 1)
+            # active.remove(freedom * i + 2)
+            active.remove(freedom * i + 3)
+            # active.remove(freedom * i + 4)
+        if (abs(nodes[i, 0] - 0) < 0.0000001) or (abs(nodes[i, 0] - a) < 0.0000001) or (abs(nodes[i, 1] - 0) < 0.0000001) or (abs(nodes[i, 1] - a) < 0.0000001):
+            active.remove(freedom * i + 2)
+    print (dimension)
+    print (active)
+    geometric_matrix = geometric_matrix.tocsr()
+    stiffness = csr_matrix(stiffness[ix_(active, active)])
+    geometric_matrix = csr_matrix(geometric_matrix[ix_(active, active)])
+    vals, vecs = eigs(A=stiffness, M=geometric_matrix, which='SM')
+    print(vals)
