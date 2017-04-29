@@ -10,20 +10,22 @@ if __name__ == "__main__":
     from shape_functions import iso_quad
     from stress_strain_matrix import plane_stress_isotropic
     from force import thermal_force_plate_5
-    from scipy.sparse.linalg import spsolve, eigs
+    from scipy.sparse.linalg import spsolve, eigsh
     from scipy.sparse import lil_matrix, csr_matrix
     from numpy import array, zeros, ix_
     from quadrature import legendre_quad
 
     a = 10.0 # A side of a square plate
+    factor = 3.0
+    b = a / factor
     h = a / 100.0 # A thickness of a square plate
     e = 1.0 # The Young's modulus
     nu = 0.3 # The Poisson's ratio
-    alpha = 1.0E-6
-    n = 21
+    alpha = 1.0E-4
+    n = 101
     freedom = 5
     d = plane_stress_isotropic(e, nu)
-    (nodes, elements) = rectangular_quads(x_count=n, y_count=n, x_origin=0.0, y_origin=0., width=a, height=a)
+    (nodes, elements) = rectangular_quads(x_count=n, y_count=int(n/factor), x_origin=0.0, y_origin=0., width=a, height=b)
 
     stiffness = assembly_quads_mindlin_plate_laminated(nodes, elements, [h], [d])
 
@@ -96,20 +98,21 @@ if __name__ == "__main__":
     print(min(sigma_x), " <= sigma x <= ", max(sigma_x))
     print(min(sigma_y), " <= sigma y <= ", max(sigma_y))
     print(min(tau_xy), " <= tau xy <= ", max(tau_xy))
+    print("Analytical sigma: " + str(e * alpha / (1 - nu)))
     # draw_vtk(nodes, elements, u, title="u", show_labels=True)
     # draw_vtk(nodes, elements, v, title="v", show_labels=True)
     # draw_vtk(nodes, elements, w, title="w", show_labels=True)
     # draw_vtk(nodes, elements, theta_x, title="theta x", show_labels=True)
     # draw_vtk(nodes, elements, theta_y, title="theta y", show_labels=True)
-    draw_vtk(nodes, elements, sigma_x, title="sigma x", show_labels=True)
-    draw_vtk(nodes, elements, sigma_y, title="sigma y", show_labels=True)
-    draw_vtk(nodes, elements, tau_xy, title="tau xy", show_labels=True)
+    # draw_vtk(nodes, elements, sigma_x, title="sigma x", show_labels=True)
+    # draw_vtk(nodes, elements, sigma_y, title="sigma y", show_labels=True)
+    # draw_vtk(nodes, elements, tau_xy, title="tau xy", show_labels=True)
 
     element_nodes = 4
     nodes_count = len(nodes)
     dimension = freedom * nodes_count
     element_dimension = freedom * element_nodes
-    geometric_matrix = lil_matrix((dimension, dimension))
+    geometric = lil_matrix((dimension, dimension))
     (xi, eta, w) = legendre_quad(3)
 
     for element in elements:
@@ -134,6 +137,10 @@ if __name__ == "__main__":
                 [sigma[0], sigma[2]],
                 [sigma[2], sigma[1]]
             ])
+            # s0 = array([
+            #     [1.4285714285714193e-04, 0.0],
+            #     [0.0, 1.4285714285714193e-04]
+            # ])
             bm1 = array([
                 [shape_dx[0], 0.0, 0.0, 0.0, 0.0, shape_dx[1], 0.0, 0.0, 0.0, 0.0, shape_dx[2], 0.0, 0.0, 0.0, 0.0, shape_dx[3], 0.0, 0.0, 0.0, 0.0],
                 [shape_dy[0], 0.0, 0.0, 0.0, 0.0, shape_dy[1], 0.0, 0.0, 0.0, 0.0, shape_dy[2], 0.0, 0.0, 0.0, 0.0, shape_dy[3], 0.0, 0.0, 0.0, 0.0]
@@ -160,12 +167,12 @@ if __name__ == "__main__":
                                      bs2.transpose().dot(s0).dot(bs2)) * jacobian * w[i]
 
         for i in range(element_dimension):
-            ii = element[i / freedom] * freedom + i % freedom
+            ii = element[int(i / freedom)] * freedom + i % freedom
             for j in range(i, element_dimension):
-                jj = element[j / freedom] * freedom + j % freedom
-                geometric_matrix[ii, jj] += local[i, j]
-                if i != j:
-                    geometric_matrix[jj, ii] = geometric_matrix[ii, jj]
+                jj = element[int(j / freedom)] * freedom + j % freedom
+                geometric[ii, jj] += local[i, j]
+                if ii != jj:
+                    geometric[jj, ii] = geometric[ii, jj]
 
     active = range(dimension)
     for i in range(len(nodes)):
@@ -175,18 +182,25 @@ if __name__ == "__main__":
             # active.remove(freedom * i + 2)
             # active.remove(freedom * i + 3)
             active.remove(freedom * i + 4)
-        if (abs(nodes[i, 1] - 0) < 0.0000001) or (abs(nodes[i, 1] - a) < 0.0000001):
+        if (abs(nodes[i, 1] - 0) < 0.0000001) or (abs(nodes[i, 1] - b) < 0.0000001):
             # active.remove(freedom * i)
             active.remove(freedom * i + 1)
             # active.remove(freedom * i + 2)
             active.remove(freedom * i + 3)
             # active.remove(freedom * i + 4)
-        if (abs(nodes[i, 0] - 0) < 0.0000001) or (abs(nodes[i, 0] - a) < 0.0000001) or (abs(nodes[i, 1] - 0) < 0.0000001) or (abs(nodes[i, 1] - a) < 0.0000001):
+        if (abs(nodes[i, 0] - 0) < 0.0000001) or (abs(nodes[i, 0] - a) < 0.0000001) or (abs(nodes[i, 1] - 0) < 0.0000001) or (abs(nodes[i, 1] - b) < 0.0000001):
             active.remove(freedom * i + 2)
-    print (dimension)
-    print (active)
-    geometric_matrix = geometric_matrix.tocsr()
-    stiffness = csr_matrix(stiffness[ix_(active, active)])
-    geometric_matrix = csr_matrix(geometric_matrix[ix_(active, active)])
-    vals, vecs = eigs(A=stiffness, M=geometric_matrix, which='SM')
+
+    geometric = lil_matrix(geometric.tocsr()[:, active])
+    geometric = lil_matrix(geometric.tocsc()[active, :])
+    geometric = geometric.tocsr()
+    stiffness = lil_matrix(stiffness.tocsr()[:, active])
+    stiffness = lil_matrix(stiffness.tocsc()[active, :])
+    stiffness = stiffness.tocsr()
+    vals, vecs = eigsh(A=stiffness, M=geometric, sigma=0.0, which='LM')
     print(vals)
+    for i in range(6):
+        x = zeros(dimension)
+        x[active] = vecs[:, i]
+        w = x[2::freedom]
+        draw_vtk(nodes, elements, w, title="w", show_labels=True)
