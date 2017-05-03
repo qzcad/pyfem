@@ -10,10 +10,8 @@ if __name__ == "__main__":
     from shape_functions import iso_quad
     from stress_strain_matrix import plane_stress_isotropic
     from force import thermal_force_quads
-    from scipy.sparse.linalg import spsolve, eigsh
-    from scipy.sparse import lil_matrix, csr_matrix
-    from numpy import array, zeros, ix_
-    from quadrature import legendre_quad
+    from scipy.sparse.linalg import spsolve
+    from numpy import array, zeros
 
     a = 10.0 # A side of a square plate
     factor = 3.0
@@ -23,7 +21,7 @@ if __name__ == "__main__":
     nu = 0.3 # The Poisson's ratio
     alpha = 1.0E-4
     n = 101
-    freedom = 3
+    freedom = 2
     d = plane_stress_isotropic(e, nu)
     (nodes, elements) = rectangular_quads(x_count=n, y_count=int(n/factor), x_origin=0.0, y_origin=0., width=a, height=b)
 
@@ -31,7 +29,7 @@ if __name__ == "__main__":
 
     print("Evaluating force...")
 
-    force = thermal_force_quads(nodes=nodes, elements=elements, thickness=h, elasticity_matrices=d, alpha_t=alpha)
+    force = thermal_force_quads(nodes=nodes, elements=elements, thickness=h, elasticity_matrix=d, alpha_t=alpha)
 
     print("Evaluating boundary conditions...")
     for i in range(len(nodes)):
@@ -81,11 +79,8 @@ if __name__ == "__main__":
     print(min(sigma_y), " <= sigma y <= ", max(sigma_y))
     print(min(tau_xy), " <= tau xy <= ", max(tau_xy))
     print("Analytical sigma: " + str(e * alpha / (1 - nu)))
-    # draw_vtk(nodes, elements, u, title="u", show_labels=True)
-    # draw_vtk(nodes, elements, v, title="v", show_labels=True)
-    # draw_vtk(nodes, elements, w, title="w", show_labels=True)
-    # draw_vtk(nodes, elements, theta_x, title="theta x", show_labels=True)
-    # draw_vtk(nodes, elements, theta_y, title="theta y", show_labels=True)
+    draw_vtk(nodes, elements, u, title="u", show_labels=True)
+    draw_vtk(nodes, elements, v, title="v", show_labels=True)
     draw_vtk(nodes, elements, sigma_x, title="sigma x", show_labels=True)
     draw_vtk(nodes, elements, sigma_y, title="sigma y", show_labels=True)
-    # draw_vtk(nodes, elements, tau_xy, title="tau xy", show_labels=True)
+    draw_vtk(nodes, elements, tau_xy, title="tau xy", show_labels=True)
