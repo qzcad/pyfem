@@ -6,12 +6,13 @@ from scipy.sparse import lil_matrix
 from print_progress import print_progress
 
 
-def assembly_quads_stress_strain(nodes, elements, elasticity_matrix, gauss_order=2):
+def assembly_quads_stress_strain(nodes, elements, thickness, elasticity_matrix, gauss_order=2):
     # type: (array, array, array, int) -> lil_matrix
     """
     Assembly Routine for the Plane Stress-Strain State Analysis using a Mesh of Quadrilaterals
     :param nodes: A two-dimensional array of coordinates (nodes)
     :param elements: A two-dimensional array of quads (a mesh)
+    :param thickness: A thickness of an object
     :param elasticity_matrix: A two-dimensional array that represents stress-strain relations
     :param gauss_order: An order of gaussian quadratures (a count of points used to approximate in each direction)
     :return: A global stiffness matrix stored in the CSR sparse format
@@ -39,7 +40,7 @@ def assembly_quads_stress_strain(nodes, elements, elasticity_matrix, gauss_order
                 [shape_dy[0],   shape_dx[0],    shape_dy[1],    shape_dx[1],    shape_dy[2],    shape_dx[2],    shape_dy[3],    shape_dx[3]]
             ])
             bt = b.conj().transpose()
-            local = local + bt.dot(elasticity_matrix).dot(b) * jacobian * w[i]
+            local = local + thickness * bt.dot(elasticity_matrix).dot(b) * jacobian * w[i]
         for i in range(element_dimension):
             ii = elements[element_index, i / freedom] * freedom + i % freedom
             for j in range(i, element_dimension):

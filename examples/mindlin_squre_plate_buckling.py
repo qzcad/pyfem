@@ -12,7 +12,7 @@ if __name__ == "__main__":
     from force import thermal_force_plate_5
     from scipy.sparse.linalg import spsolve, eigsh, eigs
     from scipy.sparse import lil_matrix, csr_matrix
-    from numpy import array, zeros, ix_
+    from numpy import array, zeros, ix_, vstack
     from quadrature import legendre_quad
 
     a = 10.0 # A side of a square plate
@@ -132,5 +132,5 @@ if __name__ == "__main__":
     print(vals)
     x = zeros(dimension)
     x[active] = vecs[:, 0]
-    w = x[0::freedom]
-    draw_vtk(nodes, elements, w, title="w", show_labels=True)
+    w = array(x[0::freedom])
+    draw_vtk(nodes=nodes, elements=elements, values=w, title="w", show_labels=True)

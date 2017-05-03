@@ -132,6 +132,35 @@ def volume_force_quads(nodes, elements, thickness, freedom, force_function, gaus
     return force
 
 
+def thermal_force_quads(nodes, elements, thickness, elasticity_matrix, alpha_t, gauss_order=3):
+    from quadrature import legendre_quad
+    from shape_functions import iso_quad
+    from numpy import sum, array
+    freedom = 2
+    dimension = len(nodes) * freedom
+    force = zeros(dimension)
+    element_nodes = 4
+    (xi, eta, w) = legendre_quad(gauss_order)
+    alpha = array([alpha_t, alpha_t, 0.0])
+    for element in elements:
+        fe = zeros(element_nodes * freedom)
+        vertices = nodes[element[:], :]
+        for i in range(len(w)):
+            (jacobian, shape, shape_dx, shape_dy) = iso_quad(vertices, xi[i], eta[i])
+            b = array([
+                [shape_dx[0], 0.0, shape_dx[1], 0.0, shape_dx[2], 0.0, shape_dx[3], 0.0],
+                [0.0, shape_dy[0], 0.0, shape_dy[1], 0.0, shape_dy[2], 0.0, shape_dy[3]],
+                [shape_dy[0], shape_dx[0], shape_dy[1], shape_dx[1], shape_dy[2], shape_dx[2], shape_dy[3], shape_dx[3]]
+            ])
+            fe = fe + thickness * b.transpose().dot(elasticity_matrix).dot(alpha) * w[i] * jacobian
+
+        for i in range(element_nodes * freedom):
+            ii = element[i / freedom] * freedom + i % freedom
+            force[ii] += fe[i]
+
+    return force
+
+
 def thermal_force_plate_5(nodes, elements, thicknesses, elasticity_matrices, alpha_t, gauss_order=3):
     from quadrature import legendre_quad
     from shape_functions import iso_quad

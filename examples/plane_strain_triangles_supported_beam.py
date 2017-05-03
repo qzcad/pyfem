@@ -23,7 +23,7 @@ if __name__ == "__main__":
     print(d)
 
     (nodes, elements) = rectangular_triangles(x_count=n, y_count=m, x_origin=-l, y_origin=-c, width=2.0 * l, height=2.0 * c)
-    stiffness = assembly_triangles_stress_strain(nodes, elements, d)
+    stiffness = assembly_triangles_stress_strain(nodes=nodes, elements=elements, elasticity_matrix=d)
 
     print("Evaluating force...")
 

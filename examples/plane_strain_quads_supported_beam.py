@@ -21,7 +21,7 @@ if __name__ == "__main__":
     d = plane_strain_isotropic(e, nu)
     print(d)
     (nodes, elements) = rectangular_quads(x_count=n, y_count=m, x_origin=-l, y_origin=-c, width=2.0 * l, height=2.0 * c)
-    stiffness = assembly_quads_stress_strain(nodes, elements, d)
+    stiffness = assembly_quads_stress_strain(nodes=nodes, elements=elements, elasticity_matrix=d, thickness=1.0)
 
     print("Evaluating force...")
 

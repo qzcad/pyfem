@@ -24,7 +24,7 @@ if __name__ == "__main__":
     print(d)
 
     (nodes, elements) = rectangular_quads(x_count=n, y_count=m, x_origin=0.0, y_origin=-c, width=l, height=2.0 * c)
-    stiffness = assembly_quads_stress_strain(nodes, elements, d)
+    stiffness = assembly_quads_stress_strain(nodes=nodes, elements=elements, thickness=1.0, elasticity_matrix=d)
 
     print("Evaluating force...")
 

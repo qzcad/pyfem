@@ -240,21 +240,30 @@ def draw_vtk(nodes,
     import vtk
     points = vtk.vtkPoints()
     for n in nodes:
-        points.InsertNextPoint([n[0], n[1], 0.0])
+        if len(n) == 2:
+            points.InsertNextPoint([n[0], n[1], 0.0])
+        elif len(n) == 3:
+            points.InsertNextPoint([n[0], n[1], n[2]])
+
     cells_array = vtk.vtkCellArray()
+
     for el in elements:
         polygon = vtk.vtkPolygon()
         polygon.GetPointIds().SetNumberOfIds(len(el))
         for i in range(len(el)):
             polygon.GetPointIds().SetId(i, el[i])
+
         cells_array.InsertNextCell(polygon)
+
     lut = vtk.vtkLookupTable()
     lut.SetNumberOfTableValues(colors_count)
     lut.SetHueRange(0.66667, 0.0)
+
     if use_gray:
         lut.SetValueRange(1.0, 0.0)
         lut.SetSaturationRange(0.0, 0.0)  # no color saturation
         lut.SetRampToLinear()
+
     lut.Build()
     renderer = vtk.vtkRenderer()
     renderer.SetBackground(background)
@@ -271,14 +280,18 @@ def draw_vtk(nodes,
 
     if values is not None:
         scalars = vtk.vtkFloatArray()
+
         for v in values:
             scalars.InsertNextValue(v)
+
         poly_data.GetPointData().SetScalars(scalars)
         bcf = vtk.vtkBandedPolyDataContourFilter()
+
         if vtk.VTK_MAJOR_VERSION <= 5:
             bcf.SetInput(poly_data)
         else:
             bcf.SetInputData(poly_data)
+
         bcf.SetNumberOfContours(contours_count)
         bcf.GenerateValues(contours_count, [values.min(), values.max()])
         bcf.SetNumberOfContours(contours_count + 1)
@@ -286,38 +299,47 @@ def draw_vtk(nodes,
         bcf.GenerateContourEdgesOn()
         bcf.Update()
         bcf_mapper.ImmediateModeRenderingOn()
+
         if vtk.VTK_MAJOR_VERSION <= 5:
             bcf_mapper.SetInput(bcf.GetOutput())
         else:
             bcf_mapper.SetInputData(bcf.GetOutput())
+
         bcf_mapper.SetScalarRange(values.min(), values.max())
         bcf_mapper.SetLookupTable(lut)
         bcf_mapper.ScalarVisibilityOn()
+
         if use_cell_data:
             bcf_mapper.SetScalarModeToUseCellData()
 
         bcf_actor.SetMapper(bcf_mapper)
         renderer.AddActor(bcf_actor)
         edge_mapper = vtk.vtkPolyDataMapper()
+
         if vtk.VTK_MAJOR_VERSION <= 5:
             edge_mapper.SetInput(bcf.GetContourEdgesOutput())
         else:
             edge_mapper.SetInputData(bcf.GetContourEdgesOutput())
+
         edge_mapper.SetResolveCoincidentTopologyToPolygonOffset()
         edge_actor = vtk.vtkActor()
         edge_actor.SetMapper(edge_mapper)
+
         if use_gray:
             edge_actor.GetProperty().SetColor(0.0, 1.0, 0.0)
         else:
             edge_actor.GetProperty().SetColor(0.0, 0.0, 0.0)
+
         renderer.AddActor(edge_actor)
 
         if show_labels:
             mask = vtk.vtkMaskPoints()
+
             if vtk.VTK_MAJOR_VERSION <= 5:
                 mask.SetInput(bcf.GetOutput())
             else:
                 mask.SetInputData(bcf.GetOutput())
+
             mask.SetOnRatio(bcf.GetOutput().GetNumberOfPoints() / 20)
             mask.SetMaximumNumberOfPoints(20)
             # Create labels for points - only show visible points
@@ -331,10 +353,12 @@ def draw_vtk(nodes,
             text_property = ldm.GetLabelTextProperty()
             text_property.SetFontFamilyToArial()
             text_property.SetFontSize(10)
+
             if use_gray:
                 text_property.SetColor(0.0, 1.0, 0.0)
             else:
                 text_property.SetColor(0.0, 0.0, 0.0)
+
             text_property.ShadowOff()
             text_property.BoldOff()
             contour_labels = vtk.vtkActor2D()
@@ -344,8 +368,10 @@ def draw_vtk(nodes,
         scalar_bar = vtk.vtkScalarBarActor()
         scalar_bar.SetOrientationToHorizontal()
         scalar_bar.SetLookupTable(lut)
+
         if title is not None:
             scalar_bar.SetTitle(title)
+
         scalar_bar_widget = vtk.vtkScalarBarWidget()
         scalar_bar_widget.SetInteractor(render_window_interactor)
         scalar_bar_widget.SetScalarBarActor(scalar_bar)
@@ -355,6 +381,7 @@ def draw_vtk(nodes,
             bcf_mapper.SetInput(poly_data)
         else:
             bcf_mapper.SetInputData(poly_data)
+
         bcf_actor.GetProperty().SetColor(0.0, 1.0, 0.0)
 
     if show_mesh:
