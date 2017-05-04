@@ -22,7 +22,7 @@ if __name__ == "__main__":
     e = 1.0 # The Young's modulus
     nu = 0.3 # The Poisson's ratio
     alpha = 1.0E-4
-    n = 101
+    n = 21
     freedom = 5
     d = plane_stress_isotropic(e, nu)
     (nodes, elements) = rectangular_quads(x_count=n, y_count=int(n/factor), x_origin=0.0, y_origin=0., width=a, height=b)

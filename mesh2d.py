@@ -103,7 +103,7 @@ def rectangular_triangles(x_count, y_count, x_origin, y_origin, width, height):
     return nodes, elements
 
 
-def annular_sector(xi_count, eta_count, alpha, min_radius, max_radius):
+def annular(xi_count, eta_count, min_radius, max_radius, alpha=None):
     """
     Routine generates structured quadrilateral grid for an annular sector
     :param xi_count: Nodes count in the angular direction
@@ -113,33 +113,45 @@ def annular_sector(xi_count, eta_count, alpha, min_radius, max_radius):
     :param max_radius: The inner radius of the annulus
     :return: Tuple of numpy arrays: nodes [x_count*y_count; 2], elements[(x_count-1)*(y_count-1); 4]
     """
-    from numpy import zeros
-    from numpy import float_
-    from numpy import int_
-    from numpy import linspace
-    from math import cos, sin, sqrt, tanh
+    from numpy import zeros, float_, int_, linspace, delete, s_
+    from math import cos, sin, sqrt, tanh, pi
     nodes = zeros((xi_count * eta_count, 2), dtype=float_)
     elements = zeros(((xi_count - 1) * (eta_count - 1), 4), dtype=int_)
     hxi = 1.0 / float(xi_count - 1)
     points_xi = linspace(0.0, 1.0, num=xi_count)
     points_eta = linspace(0.0, 1.0, num=eta_count)
-    p = sqrt((min_radius - min_radius * cos(alpha * hxi)) ** 2.0 + (min_radius * sin(alpha * hxi)) ** 2.0)
+    angle = alpha
+    if alpha is None:
+        angle = 2.0 * pi
+
+    p = sqrt((min_radius - min_radius * cos(angle * hxi)) ** 2.0 + (min_radius * sin(angle * hxi)) ** 2.0)
     q = 2.0 - p
     for i in range(xi_count):
         xi = points_xi[i]
         for j in range(eta_count):
             eta = points_eta[j]
             s = p * eta + (1.0 - p) * (1.0 - tanh(q * (1.0 - eta)) / tanh(q))
-            x = (min_radius + (max_radius - min_radius) * s) * cos(alpha * xi)
-            y = (min_radius + (max_radius - min_radius) * s) * sin(alpha * xi)
+            x = (min_radius + (max_radius - min_radius) * s) * cos(angle * xi)
+            y = (min_radius + (max_radius - min_radius) * s) * sin(angle * xi)
             nodes[i * eta_count + j, 0] = x
             nodes[i * eta_count + j, 1] = y
+
     for i in range(xi_count - 1):
         for j in range(eta_count - 1):
             elements[i * (eta_count - 1) + j, 0] = i * eta_count + j
             elements[i * (eta_count - 1) + j, 1] = i * eta_count + (j + 1)
             elements[i * (eta_count - 1) + j, 2] = (i + 1) * eta_count + (j + 1)
             elements[i * (eta_count - 1) + j, 3] = (i + 1) * eta_count + j
+
+    if alpha is None:
+        i = xi_count - 2
+        for j in range(eta_count - 1):
+            elements[i * (eta_count - 1) + j, 0] = i * eta_count + j
+            elements[i * (eta_count - 1) + j, 1] = i * eta_count + (j + 1)
+            elements[i * (eta_count - 1) + j, 2] = (j + 1)
+            elements[i * (eta_count - 1) + j, 3] = j
+
+        nodes = delete(nodes, s_[(xi_count - 1) * eta_count: xi_count * eta_count], 0)
 
     return nodes, elements
 
@@ -409,7 +421,7 @@ if __name__ == "__main__":
     (nodes, triangles) = rectangular_triangles(21, 11, 0, 0, 20, 10)
     draw_vtk(nodes=nodes, elements=triangles, title='Triangular Grid', show_mesh=True)
 
-    (nodes, quads) = annular_sector(11, 11, 0.8, 1.0, 4.0)
+    (nodes, quads) = annular(xi_count=51, eta_count=11, min_radius=2.0, max_radius=4.0)
     draw_vtk(nodes=nodes, elements=quads, show_mesh=True)
 
     p00 = array([1.0, 1.0])

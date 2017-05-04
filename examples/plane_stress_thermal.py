@@ -3,10 +3,8 @@
 
 
 if __name__ == "__main__":
-    from mesh2d import rectangular_quads
-    from mesh2d import draw_vtk
-    from assembly2d import assembly_quads_stress_strain
-    from assembly2d import assembly_initial_value
+    from mesh2d import rectangular_quads, draw_vtk, annular
+    from assembly2d import assembly_quads_stress_strain, assembly_initial_value
     from shape_functions import iso_quad
     from stress_strain_matrix import plane_stress_isotropic
     from force import thermal_force_quads
@@ -23,7 +21,8 @@ if __name__ == "__main__":
     n = 101
     freedom = 2
     d = plane_stress_isotropic(e, nu)
-    (nodes, elements) = rectangular_quads(x_count=n, y_count=int(n/factor), x_origin=0.0, y_origin=0., width=a, height=b)
+    # (nodes, elements) = rectangular_quads(x_count=n, y_count=int(n/factor), x_origin=0.0, y_origin=0., width=a, height=b)
+    (nodes, elements) = annular(xi_count=n, eta_count=int(n / factor), min_radius=b, max_radius=a)
 
     stiffness = assembly_quads_stress_strain(nodes=nodes, elements=elements, elasticity_matrix=d, thickness=h)
 
@@ -33,9 +32,9 @@ if __name__ == "__main__":
 
     print("Evaluating boundary conditions...")
     for i in range(len(nodes)):
-        if abs(nodes[i, 0] - a/2.0) < 0.0000001:
+        if abs(nodes[i, 0]) < 0.0000001:
             assembly_initial_value(stiffness, force, freedom * i, 0.0)
-        if abs(nodes[i, 1] - b/2.0) < 0.0000001:
+        if abs(nodes[i, 1]) < 0.0000001:
             assembly_initial_value(stiffness, force, freedom * i + 1, 0.0)
 
     print("Solving a system of linear equations")
