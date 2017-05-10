@@ -219,6 +219,38 @@ def transfinite(xi_count, eta_count, xi_curve_bottom, xi_curve_top, eta_curve_le
     return nodes, elements
 
 
+def read(filename):
+    from numpy import zeros, float_, int_
+    with open(filename) as f:
+        line = f.readline() # the first line
+        numbers = line.split()
+        freedom = int(numbers[0])
+        element_nodes = int(numbers[1])
+        element_faces = int(numbers[2])
+        line = f.readline() # the second line
+        numbers = line.split()
+        nodes_count = int(numbers[0])
+        nodes = zeros((nodes_count, freedom), dtype=float_)
+        for i in range(nodes_count):
+            line = f.readline() # next line
+            numbers = line.split()
+            for j in range(freedom):
+                nodes[i, j] = float(numbers[j])
+
+        line = f.readline()  # next line
+        numbers = line.split()
+        elements_count = int(numbers[0])
+        elements = zeros((elements_count, element_nodes), dtype=int_)
+        for i in range(elements_count):
+            line = f.readline()  # next line
+            numbers = line.split()
+            for j in range(element_nodes):
+                elements[i, j] = int(numbers[j])
+
+        f.close()
+        return nodes, elements
+
+
 def draw_vtk(nodes,
              elements,
              values=None,
@@ -466,3 +498,6 @@ if __name__ == "__main__":
     (nodes, quads) = transfinite(21, 21, xi_curve_bottom=curve_bottom, xi_curve_top=curve_top,
                                  eta_curve_left=left_curve, eta_curve_right=right_curve)
     draw_vtk(nodes=nodes, elements=quads, show_mesh=True, background=(1.0, 1.0, 1.0))
+
+    (nodes, quads) = read('examples/quad_triangle_mesh_21.txt')
+    draw_vtk(nodes=nodes, elements=quads, title='Quadrilateral Grid', show_mesh=True, show_axes=True)
