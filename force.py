@@ -132,7 +132,7 @@ def volume_force_quads(nodes, elements, thickness, freedom, force_function, gaus
     return force
 
 
-def thermal_force_quads(nodes, elements, thickness, elasticity_matrix, alpha_t, gauss_order=3):
+def thermal_force_quads(nodes, elements, thickness, elasticity_matrix, alpha_t, tfunc=None, gauss_order=3):
     from quadrature import legendre_quad
     from shape_functions import iso_quad
     from numpy import sum, array
@@ -152,7 +152,11 @@ def thermal_force_quads(nodes, elements, thickness, elasticity_matrix, alpha_t, 
                 [0.0, shape_dy[0], 0.0, shape_dy[1], 0.0, shape_dy[2], 0.0, shape_dy[3]],
                 [shape_dy[0], shape_dx[0], shape_dy[1], shape_dx[1], shape_dy[2], shape_dx[2], shape_dy[3], shape_dx[3]]
             ])
-            fe = fe + thickness * b.transpose().dot(elasticity_matrix).dot(alpha) * w[i] * jacobian
+            if tfunc is None:
+                fe = fe + thickness * b.transpose().dot(elasticity_matrix).dot(alpha) * w[i] * jacobian
+            else:
+                therm = tfunc(sum(vertices[:, 0] * shape), sum(vertices[:, 1] * shape))
+                fe = fe + thickness * therm * b.transpose().dot(elasticity_matrix).dot(alpha) * w[i] * jacobian
 
         for i in range(element_nodes * freedom):
             ii = element[i / freedom] * freedom + i % freedom

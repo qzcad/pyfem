@@ -231,6 +231,59 @@ def assembly_quads_mindlin_plate_laminated(nodes, elements, thicknesses, elastic
     return global_matrix.tocsr()
 
 
+def assembly_quads_mindlin_plate_geometric(nodes, elements, thickness, sigma_x, sigma_y, tau_xy, gauss_order=3):
+    from quadrature import legendre_quad
+    from shape_functions import iso_quad
+    from numpy import sum
+    print "The assembly routine is started"
+    freedom = 3
+    element_nodes = 4
+    nodes_count = len(nodes)
+    dimension = freedom * nodes_count
+    element_dimension = freedom * element_nodes
+    geometric = lil_matrix((dimension, dimension))
+    elements_count = len(elements)
+    (xi, eta, w) = legendre_quad(gauss_order)
+
+    for element_index in range(elements_count):
+        kg = zeros((element_dimension, element_dimension))
+        vertices = nodes[elements[element_index, :], :]
+        sx = sigma_x[elements[element_index, :]]
+        sy = sigma_y[elements[element_index, :]]
+        txy = tau_xy[elements[element_index, :]]
+        for i in range(len(w)):
+            (jacobian, shape, shape_dx, shape_dy) = iso_quad(vertices, xi[i], eta[i])
+            s0 = array([
+                [sum(shape * sx), sum(shape * txy)],
+                [sum(shape * txy), sum(shape * sy)]
+            ])
+            bb = array([
+                [shape_dx[0], 0.0, 0.0, shape_dx[1], 0.0, 0.0, shape_dx[2], 0.0, 0.0, shape_dx[3], 0.0, 0.0],
+                [shape_dy[0], 0.0, 0.0, shape_dy[1], 0.0, 0.0, shape_dy[2], 0.0, 0.0, shape_dy[3], 0.0, 0.0]
+            ])
+            bs1 = array([
+                [0.0, shape_dx[0], 0.0, 0.0, shape_dx[1], 0.0, 0.0, shape_dx[2], 0.0, 0.0, shape_dx[3], 0.0],
+                [0.0, shape_dy[0], 0.0, 0.0, shape_dy[1], 0.0, 0.0, shape_dy[2], 0.0, 0.0, shape_dy[3], 0.0]
+            ])
+            bs2 = array([
+                [0.0, 0.0, shape_dx[0], 0.0, 0.0, shape_dx[1], 0.0, 0.0, shape_dx[2], 0.0, 0.0, shape_dx[3]],
+                [0.0, 0.0, shape_dy[0], 0.0, 0.0, shape_dy[1], 0.0, 0.0, shape_dy[2], 0.0, 0.0, shape_dy[3]]
+            ])
+            kg = kg + thickness * bb.transpose().dot(s0).dot(bb) * jacobian * w[i] + thickness ** 3.0 / 12.0 * (
+            bs1.transpose().dot(s0).dot(bs1) + bs2.transpose().dot(s0).dot(bs2)) * jacobian * w[i]
+
+        for i in range(element_dimension):
+            ii = elements[element_index, i / freedom] * freedom + i % freedom
+            for j in range(i, element_dimension):
+                jj = elements[element_index, j / freedom] * freedom + j % freedom
+                geometric[ii, jj] += kg[i, j]
+                if ii != jj:
+                    geometric[jj, ii] = geometric[ii, jj]
+        print_progress(element_index, elements_count - 1)
+    print "\nThe assembly routine is completed"
+    return geometric.tocsr()
+
+
 def assembly_initial_value(stiffness, force, position, value=0.0):
     """
     Assembly routine modifies a linear system of equations. Unknown variable at the specified position will be equal to 
