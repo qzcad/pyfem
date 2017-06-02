@@ -336,11 +336,12 @@ def draw_vtk(nodes,
         else:
             bcf.SetInputData(poly_data)
 
-        bcf.SetNumberOfContours(contours_count)
-        bcf.GenerateValues(contours_count, [values.min(), values.max()])
-        bcf.SetNumberOfContours(contours_count + 1)
-        bcf.SetScalarModeToValue()
-        bcf.GenerateContourEdgesOn()
+        if contours_count > 0:
+            bcf.SetNumberOfContours(contours_count)
+            bcf.GenerateValues(contours_count, [values.min(), values.max()])
+            bcf.SetNumberOfContours(contours_count + 1)
+            bcf.GenerateContourEdgesOn()
+
         bcf.Update()
         bcf_mapper.ImmediateModeRenderingOn()
 

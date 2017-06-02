@@ -81,7 +81,9 @@ if __name__ == "__main__":
     print ("Matrices are converted")
     vals, vecs = eigsh(A=stiffness, M=geometric, sigma=0.0, which='LM')
     print(vals)
-    x = zeros(dimension)
-    x[active] = vecs[:, 0]
-    w = array(x[0::freedom])
-    draw_vtk(nodes=hstack((nodes, w.reshape(len(w), 1) / 100.0)), elements=elements, values=w, title="w", show_labels=True, show_axes=True)
+    for i in range(len(vals)):
+        x = zeros(dimension)
+        x[active] = vecs[:, i]
+        w = array(x[0::freedom])
+        draw_vtk(nodes=hstack((nodes, w.reshape(len(w), 1) / 50.0)), elements=elements, values=w, title="w, T = " + str(vals[i]),
+                 show_labels=False, show_axes=True, use_gray=True, contours_count=0, colors_count=5)

@@ -284,6 +284,73 @@ def assembly_quads_mindlin_plate_geometric(nodes, elements, thickness, sigma_x, 
     return geometric.tocsr()
 
 
+def plate_stresses(nodes, elements, elasticity_matrix, displacement, z=0.0):
+    from shape_functions import iso_quad, iso_triangle
+    from math import sqrt
+    freedom = 3
+    element_nodes = len(elements[0, :])
+    nodes_count = len(nodes)
+    dimension = freedom * nodes_count
+    element_dimension = freedom * element_nodes
+    df = elasticity_matrix
+    dc = array([
+        [df[2, 2], 0.0],
+        [0.0, df[2, 2]]
+    ])
+    xi =  array([-1.0, 1.0, 1.0, -1.0]) if element_nodes == 4 else array([0.0, 1.0, 0.0])
+    eta = array([-1.0, -1.0, 1.0, 1.0]) if element_nodes == 4 else array([0.0, 0.0, 1.0])
+    sigma_x = zeros(nodes_count)
+    sigma_y = zeros(nodes_count)
+    tau_xy = zeros(nodes_count)
+    tau_xz = zeros(nodes_count)
+    tau_yz = zeros(nodes_count)
+    mises = zeros(nodes_count)
+    adjacent = zeros(nodes_count)
+    print("Recovering stresses")
+    for element in elements:
+        vertices = nodes[element[:], :]
+        el_displ = zeros(element_nodes * freedom)
+        for i in range(freedom):
+            el_displ[i::freedom] = displacement[element[:] * freedom + i]
+
+        for i in range(element_nodes):
+            if element_nodes == 4:
+                (jacobian, shape, shape_dx, shape_dy) = iso_quad(vertices, xi[i], eta[i])
+            else:
+                (jacobian, shape, shape_dx, shape_dy) = iso_triangle(vertices, xi[i], eta[i])
+
+            bf = zeros((3, freedom * element_nodes))
+            bc = zeros((2, freedom * element_nodes))
+            for j in range(element_nodes):
+                bf[0, j * freedom + 1] = shape_dx[j]
+                bf[1, j * freedom + 2] = shape_dy[j]
+                bf[2, j * freedom + 1] = shape_dy[j]
+                bf[2, j * freedom + 2] = shape_dx[j]
+                bc[0, j * freedom] = shape_dx[j]
+                bc[0, j * freedom + 1] = shape[j]
+                bc[1, j * freedom] = shape_dy[j]
+                bc[1, j * freedom + 2] = shape[j]
+
+            sigma = z * df.dot(bf).dot(el_displ)
+            tau = dc.dot(bc).dot(el_displ)
+            sigma_x[element[i]] += sigma[0]  #11
+            sigma_y[element[i]] += sigma[1]  #22
+            tau_xy[element[i]] += sigma[2]   # 12 21
+            tau_xz[element[i]] += tau[0]  # 31 13
+            tau_yz[element[i]] += tau[1]  # 23 32
+            mises[element[i]] += sqrt(0.5 * ((sigma[0] - sigma[1])**2.0 + sigma[1]**2.0 + sigma[0]**2.0 + 6.0 * (sigma[2]**2.0 + tau[0]**2.0 + tau[1]**2.0)))
+            adjacent[element[i]] += 1.0
+
+    sigma_x /= adjacent
+    sigma_y /= adjacent
+    tau_xy /= adjacent
+    tau_xz /= adjacent
+    tau_yz /= adjacent
+    mises /= adjacent
+    return sigma_x, sigma_y, tau_xy, tau_xz, tau_yz, mises
+
+
+
 def assembly_initial_value(stiffness, force, position, value=0.0):
     """
     Assembly routine modifies a linear system of equations. Unknown variable at the specified position will be equal to 
