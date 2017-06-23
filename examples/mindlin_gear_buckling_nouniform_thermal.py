@@ -30,7 +30,9 @@ if __name__ == "__main__":
 
     def tfunc(x, y):
         r = sqrt(x**2.0 + y**2.0)
-        return 250.0 * (r - 0.08) / (0.13 - 0.08)
+        if r <= radius:
+            return 250.0 * (r - 0.8) / (1.3 - 0.8)
+        return 250.0
 
 
     force = thermal_force_quads(nodes=nodes, elements=elements, thickness=h, elasticity_matrix=df, alpha_t=alpha, tfunc=tfunc)
@@ -116,11 +118,11 @@ if __name__ == "__main__":
     stiffness = stiffness.tocsr()
     vals, vecs = eigsh(A=stiffness, M=geometric, sigma=0.0, which='LM')
     print(vals)
-    print (vals[0] * 250.0 * (radius - 0.08) / (0.13 - 0.08))
+    print (vals[0] * 250.0)
     for i in range(len(vals)):
         x = zeros(plate_dim)
         x[active] = vecs[:, i]
         w = array(x[0::freedom])
         #sigma_x, sigma_y, tau_xy, tau_xz, tau_yz, mises = plate_stresses(nodes=nodes, elements=elements, elasticity_matrix=df, displacement=x, z=h/2.0)
-        draw_vtk(nodes=hstack((nodes, w.reshape(len(w), 1) / 1.0)), elements=elements, values=w, title="w, T = " + str(vals[i] * 250.0 * (radius - 0.08) / (0.13 - 0.08)),
+        draw_vtk(nodes=hstack((nodes, w.reshape(len(w), 1) / 5.0)), elements=elements, values=w, title="w, T = " + str(vals[i] * 250.0) + " lambda = " + str(vals[i]),
                  show_labels=False, show_axes=True, use_gray=True, contours_count=0, colors_count=5)
