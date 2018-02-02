@@ -502,3 +502,6 @@ if __name__ == "__main__":
 
     (nodes, quads) = read('examples/quad_triangle_mesh_21.txt')
     draw_vtk(nodes=nodes, elements=quads, title='Quadrilateral Grid', show_mesh=True, show_axes=True)
+
+    (nodes, quads) = read('examples/nose_cone_2017.txt')
+    draw_vtk(nodes=nodes, elements=quads, title='Quadrilateral Grid', show_mesh=True, show_axes=True)
